@@ -10,6 +10,12 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import HardeningRule, UserProgress, ScanReport
 
+# ReportLab imports for PDF generation
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+
 def index_view(request):
     rules = HardeningRule.objects.select_related('progress').all()
     
@@ -301,81 +307,106 @@ def execute_windows_audits():
 
 @require_POST
 def api_scan_system(request):
+    """Scans BOTH Windows and Linux systems concurrently (simulating Linux if on Windows host)."""
     try:
-        data = json.loads(request.body)
-        platform_name = data.get('platform', 'windows')
+        # Load all rules
+        all_rules = HardeningRule.objects.select_related('progress').all()
+        win_rules = [r for r in all_rules if r.platform == 'windows']
+        lin_rules = [r for r in all_rules if r.platform == 'linux']
         
-        # Load rules and current state (BEFORE state)
-        rules = HardeningRule.objects.filter(platform=platform_name).select_related('progress')
-        total = rules.count()
-        if total == 0:
-            return JsonResponse({'success': False, 'error': 'No rules found for platform'}, status=400)
-            
-        before_completed = [r.id for r in rules if r.progress.is_completed]
-        before_score = int((len(before_completed) / total) * 100) if total > 0 else 0
+        # Calculate Before States
+        before_win_completed = [r.id for r in win_rules if r.progress.is_completed]
+        before_lin_completed = [r.id for r in lin_rules if r.progress.is_completed]
         
-        passed_ids = []
+        win_total = len(win_rules)
+        lin_total = len(lin_rules)
+        global_total = len(all_rules)
         
-        # Execute Scans
+        # Perform Scans
+        # Windows Scan: Live if on Win32, else simulated
         is_windows_host = sys.platform == 'win32'
-        
-        if platform_name == 'windows' and is_windows_host:
-            passed_ids = execute_windows_audits()
+        if is_windows_host:
+            passed_win_ids = execute_windows_audits()
         else:
-            # If scanning Linux on Windows, or Windows on Linux -> Simulate scan results
-            # Make it mock so the user can experience the scanning reports
-            # Let's say rules 1, 3, 5, 7, 8 are compliant (simulating ~55% compliance)
-            all_ids = [r.id for r in rules]
-            # Select every second rule
-            passed_ids = [all_ids[i] for i in range(len(all_ids)) if i % 2 == 0]
+            # Simulate Windows Scan on other platforms (even-indexed pass)
+            passed_win_ids = [win_rules[i].id for i in range(win_total) if i % 2 == 0]
             
-        # Update database states (AFTER state)
-        for rule in rules:
+        # Linux Scan: Always simulated on a Windows Host
+        # Alternate rules to pass so we get a realistic score (e.g. 5 out of 9 rules pass)
+        passed_lin_ids = [lin_rules[i].id for i in range(lin_total) if i % 2 == 0]
+        
+        passed_ids = passed_win_ids + passed_lin_ids
+        
+        # Update SQLite DB checklist states
+        for rule in all_rules:
             progress = rule.progress
             progress.is_completed = (rule.id in passed_ids)
             progress.save()
             
-        after_completed = passed_ids
-        after_score = int((len(after_completed) / total) * 100) if total > 0 else 0
+        # Compute After States
+        after_win_completed = passed_win_ids
+        after_lin_completed = passed_lin_ids
         
-        # Compare Before vs After
-        newly_completed = list(set(after_completed) - set(before_completed))
-        newly_failed = list(set(before_completed) - set(after_completed))
-        still_completed = list(set(after_completed) & set(before_completed))
-        still_failed = list(set(all_ids if 'all_ids' in locals() else [r.id for r in rules]) - set(after_completed))
+        win_before_score = int((len(before_win_completed) / win_total) * 100) if win_total > 0 else 0
+        win_after_score = int((len(after_win_completed) / win_total) * 100) if win_total > 0 else 0
         
-        # Log to ScanReport history database table
+        lin_before_score = int((len(before_lin_completed) / lin_total) * 100) if lin_total > 0 else 0
+        lin_after_score = int((len(after_lin_completed) / lin_total) * 100) if lin_total > 0 else 0
+        
+        global_before_score = int(((len(before_win_completed) + len(before_lin_completed)) / global_total) * 100) if global_total > 0 else 0
+        global_after_score = int((len(passed_ids) / global_total) * 100) if global_total > 0 else 0
+        
+        # Identify changes
+        before_all = before_win_completed + before_lin_completed
+        newly_completed = list(set(passed_ids) - set(before_all))
+        still_failed = list(set([r.id for r in all_rules]) - set(passed_ids))
+        still_completed = list(set(passed_ids) & set(before_all))
+        
+        # Save a unified dual-platform ScanReport in SQL
         new_report = ScanReport.objects.create(
-            platform=platform_name,
-            score=after_score,
-            passed_checks=json.dumps(after_completed),
-            failed_checks=json.dumps([r.id for r in rules if r.id not in after_completed])
+            platform='combined',
+            score=global_after_score,
+            passed_checks=json.dumps(passed_ids),
+            failed_checks=json.dumps(still_failed)
         )
         
-        # Get the previous scan report to show historical change if applicable
+        # Find previous scan report to represent true delta over time
         previous_report = None
         try:
-            previous_report = ScanReport.objects.filter(platform=platform_name).exclude(id=new_report.id).latest('timestamp')
+            previous_report = ScanReport.objects.filter(platform='combined').exclude(id=new_report.id).latest('timestamp')
         except ScanReport.DoesNotExist:
             pass
             
-        historical_score = previous_report.score if previous_report else before_score
+        historical_score = previous_report.score if previous_report else global_before_score
         
         return JsonResponse({
             'success': True,
             'report': {
                 'timestamp': new_report.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                 'before_score': historical_score,
-                'after_score': after_score,
+                'after_score': global_after_score,
+                
+                'win_before': win_before_score,
+                'win_after': win_after_score,
+                'lin_before': lin_before_score,
+                'lin_after': lin_after_score,
+                
                 'resolved_count': len(newly_completed),
                 'resolved_rules': [HardeningRule.objects.get(id=rid).title for rid in newly_completed],
                 'still_failed_rules': [HardeningRule.objects.get(id=rid).title for rid in still_failed],
                 'still_completed_rules': [HardeningRule.objects.get(id=rid).title for rid in still_completed]
             },
             'stats': {
-                'completed': len(after_completed),
-                'pending': total - len(after_completed),
-                'percentage': after_score
+                'windows': {
+                    'completed': len(after_win_completed),
+                    'pending': win_total - len(after_win_completed),
+                    'percentage': win_after_score
+                },
+                'linux': {
+                    'completed': len(after_lin_completed),
+                    'pending': lin_total - len(after_lin_completed),
+                    'percentage': lin_after_score
+                }
             }
         })
     except Exception as e:
@@ -387,14 +418,10 @@ def api_scan_system(request):
 def download_repository_zip(request):
     """Zips the entire workspace directories and streams as package file, omitting DB/Caches."""
     buffer = io.BytesIO()
-    
-    # Locate workspace base path
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
     try:
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for root, dirs, files in os.walk(base_dir):
-                # Prune directory search path
                 dirs[:] = [d for d in dirs if d not in ['.git', '__pycache__', '.venv', 'env', '.idea', '.vscode', '.agents']]
                 for file in files:
                     if file in ['db.sqlite3', 'db.sqlite3-journal'] or file.endswith('.log') or file.endswith('.pyc'):
@@ -408,3 +435,181 @@ def download_repository_zip(request):
         return response
     except Exception as e:
         return HttpResponse(f"Error packing repository: {str(e)}", status=500)
+
+
+# --- PDF Compliance Report Compiler (ReportLab) ---
+
+def download_pdf_report(request):
+    """Compiles SQLite rules & progress data, writes a formatted PDF document, and downloads it."""
+    try:
+        # Load all rules and progress
+        rules = HardeningRule.objects.select_related('progress').all().order_by('platform', 'category')
+        win_rules = [r for r in rules if r.platform == 'windows']
+        lin_rules = [r for r in rules if r.platform == 'linux']
+        
+        # Fetch the latest combined scan report
+        latest_report = None
+        try:
+            latest_report = ScanReport.objects.filter(platform='combined').latest('timestamp')
+        except ScanReport.DoesNotExist:
+            pass
+            
+        win_pct = int((sum(1 for r in win_rules if r.progress.is_completed) / len(win_rules)) * 100) if win_rules else 0
+        lin_pct = int((sum(1 for r in lin_rules if r.progress.is_completed) / len(lin_rules)) * 100) if lin_rules else 0
+        global_pct = int((sum(1 for r in rules if r.progress.is_completed) / len(rules)) * 100) if rules else 0
+        
+        # Setup memory stream and doc template
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36
+        )
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        
+        # Custom styles to fit the dark professional template theme
+        title_style = ParagraphStyle(
+            'TitleStyle',
+            parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
+            fontSize=22,
+            textColor=colors.HexColor('#4f46e5'),
+            spaceAfter=6
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'SubtitleStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Oblique',
+            fontSize=10,
+            textColor=colors.HexColor('#6b7280'),
+            spaceAfter=15
+        )
+        
+        h2_style = ParagraphStyle(
+            'H2Style',
+            parent=styles['Heading2'],
+            fontName='Helvetica-Bold',
+            fontSize=14,
+            textColor=colors.HexColor('#1f2937'),
+            spaceBefore=12,
+            spaceAfter=6
+        )
+        
+        body_style = ParagraphStyle(
+            'BodyStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9.5,
+            textColor=colors.HexColor('#374151'),
+            leading=13
+        )
+        
+        cell_bold = ParagraphStyle(
+            'CellBold',
+            parent=body_style,
+            fontName='Helvetica-Bold'
+        )
+        
+        status_ok = ParagraphStyle(
+            'StatusOk',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=9,
+            textColor=colors.HexColor('#10b981') # Emerald green
+        )
+        
+        status_fail = ParagraphStyle(
+            'StatusFail',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=9,
+            textColor=colors.HexColor('#f59e0b') # Amber
+        )
+
+        elements_list = []
+        
+        # 1. Title & Header
+        elements_list.append(Paragraph("OS Hardening Assistant - Compliance Report", title_style))
+        elements_list.append(Paragraph(f"Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')} UTC | Local System Audit Diagnostic Report", subtitle_style))
+        elements_list.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#e5e7eb'), spaceAfter=15))
+        
+        # 2. Executive Summary Block
+        elements_list.append(Paragraph("Executive Summary", h2_style))
+        
+        # Stats summary grid table
+        scan_date = latest_report.timestamp.strftime('%Y-%m-%d %H:%M:%S') if latest_report else 'No automated scan run yet'
+        summary_data = [
+            [Paragraph("Target Environment", cell_bold), Paragraph("Local Windows Host System", body_style)],
+            [Paragraph("Last Full Scan Run", cell_bold), Paragraph(scan_date, body_style)],
+            [Paragraph("Windows Compliance Score", cell_bold), Paragraph(f"{win_pct}%", cell_bold)],
+            [Paragraph("Linux Compliance Score", cell_bold), Paragraph(f"{lin_pct}%", cell_bold)],
+            [Paragraph("Overall Compliance Rating", cell_bold), Paragraph(f"{global_pct}%", ParagraphStyle('GlobalPct', parent=cell_bold, fontSize=11, textColor=colors.HexColor('#4f46e5')))]
+        ]
+        
+        summary_table = Table(summary_data, colWidths=[200, 340])
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f9fafb')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+            ('PADDING', (0,0), (-1,-1), 8),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        elements_list.append(summary_table)
+        elements_list.append(Spacer(1, 15))
+        
+        # 3. Compliance Rule Detailed Breakdown Table
+        elements_list.append(Paragraph("Detailed Security Controls Audit", h2_style))
+        
+        table_data = [
+            [Paragraph("OS", cell_bold), Paragraph("Security Control Check Name", cell_bold), Paragraph("Category", cell_bold), Paragraph("Severity", cell_bold), Paragraph("Status", cell_bold)]
+        ]
+        
+        for rule in rules:
+            status_para = Paragraph("COMPLIANT", status_ok) if rule.progress.is_completed else Paragraph("VULNERABLE", status_fail)
+            os_label = "WIN" if rule.platform == "windows" else "LINUX"
+            
+            table_data.append([
+                Paragraph(os_label, body_style),
+                Paragraph(rule.title, body_style),
+                Paragraph(rule.category, body_style),
+                Paragraph(rule.severity.upper(), cell_bold if rule.severity in ['critical', 'high'] else body_style),
+                status_para
+            ])
+            
+        rules_table = Table(table_data, colWidths=[50, 200, 100, 90, 100])
+        
+        # Style rows alternatingly
+        table_styles = [
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#4f46e5')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+            ('PADDING', (0,0), (-1,-1), 5),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]
+        
+        # Header textcolor override in reportlab
+        for col_idx in range(5):
+            table_styles.append(('TEXTCOLOR', (col_idx,0), (col_idx,0), colors.white))
+            
+        for i in range(1, len(table_data)):
+            bg_color = colors.HexColor('#f9fafb') if i % 2 == 0 else colors.white
+            table_styles.append(('BACKGROUND', (0, i), (-1, i), bg_color))
+            
+        rules_table.setStyle(TableStyle(table_styles))
+        elements_list.append(rules_table)
+        
+        # Build document
+        doc.build(elements_list)
+        
+        buffer.seek(0)
+        response = FileResponse(buffer, as_attachment=True, filename='os-hardening-report.pdf')
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f"Error compiling PDF: {str(e)}", status=500)

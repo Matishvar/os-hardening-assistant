@@ -55,8 +55,12 @@ function cacheDOMElements() {
     
     // Report fields
     reportTimestamp: document.getElementById("report-timestamp"),
-    reportBeforeScore: document.getElementById("report-before-score"),
-    reportAfterScore: document.getElementById("report-after-score"),
+    reportGlobalBefore: document.getElementById("report-global-before"),
+    reportGlobalAfter: document.getElementById("report-global-after"),
+    reportWinBefore: document.getElementById("report-win-before"),
+    reportWinAfter: document.getElementById("report-win-after"),
+    reportLinBefore: document.getElementById("report-lin-before"),
+    reportLinAfter: document.getElementById("report-lin-after"),
     scoreShiftBar: document.getElementById("score-shift-bar"),
     shiftSummary: document.getElementById("shift-summary"),
     reportResolvedList: document.getElementById("report-resolved-list"),
@@ -199,7 +203,6 @@ function bindEvents() {
   // --- Automated Scanner Actions ---
 
   elements.scanBtn.addEventListener("click", async () => {
-    // Show spinner overlay
     elements.loadingOverlay.classList.add("active");
     
     try {
@@ -209,7 +212,7 @@ function bindEvents() {
           'Content-Type': 'application/json',
           'X-CSRFToken': getCsrfToken()
         },
-        body: JSON.stringify({ platform: state.selectedPlatform })
+        body: JSON.stringify({ platform: "combined" })
       });
       
       const res = await response.json();
@@ -220,8 +223,15 @@ function bindEvents() {
         
         // Populate modal report fields
         elements.reportTimestamp.textContent = report.timestamp;
-        elements.reportBeforeScore.textContent = `${report.before_score}%`;
-        elements.reportAfterScore.textContent = `${report.after_score}%`;
+        
+        elements.reportGlobalBefore.textContent = `${report.before_score}%`;
+        elements.reportGlobalAfter.textContent = `${report.after_score}%`;
+        
+        elements.reportWinBefore.textContent = `${report.win_before}%`;
+        elements.reportWinAfter.textContent = `${report.win_after}%`;
+        
+        elements.reportLinBefore.textContent = `${report.lin_before}%`;
+        elements.reportLinAfter.textContent = `${report.lin_after}%`;
         
         // Update shift indicator bar
         elements.scoreShiftBar.style.width = `${report.after_score}%`;
@@ -229,7 +239,7 @@ function bindEvents() {
         // Score difference summary
         const diff = report.after_score - report.before_score;
         const sign = diff >= 0 ? "+" : "";
-        elements.shiftSummary.textContent = `Compliance score changed by ${sign}${diff}%`;
+        elements.shiftSummary.textContent = `Global compliance score changed by ${sign}${diff}%`;
         
         // Populate resolved rules list
         if (report.resolved_rules.length === 0) {
@@ -261,7 +271,6 @@ function bindEvents() {
   // Close report modal and refresh page to load new DB state
   elements.closeModalBtn.addEventListener("click", () => {
     elements.reportModal.classList.remove("active");
-    // Reload page to automatically update all checkbox visual states from SQLite
     window.location.reload();
   });
   
@@ -527,7 +536,7 @@ echo "=========================================="
 # Backup configuration helper function
 backup_file() {
     local filepath="$1"
-    if [ -f "$filepath" ] && [ ! -f "\${filepath}.bak" ]; then
+    if [ -f "$filepath" ] && [ ! -f "\text{filepath}.bak" ]; then
         echo "Creating backup of \$filepath to \${filepath}.bak"
         cp "\$filepath" "\${filepath}.bak"
     fi

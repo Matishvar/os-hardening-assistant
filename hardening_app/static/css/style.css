@@ -558,7 +558,7 @@ header {
   color: #60a5fa;
 }
 
-/* Right Column: Script Generator Pane */
+/* Right Column: Script Viewer & Compiler */
 .script-pane {
   position: sticky;
   top: 2rem;
@@ -724,7 +724,7 @@ header {
 
 .modal-content {
   width: 90%;
-  max-width: 680px;
+  max-width: 780px;
   background: rgba(13, 17, 30, 0.95);
   border-radius: var(--radius-lg);
   padding: 2.25rem;
@@ -778,68 +778,12 @@ header {
   color: var(--text-muted);
 }
 
-.comparison-scores {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 1.5rem 0;
-  gap: 1.5rem;
-}
-
-.score-card {
-  flex: 1;
-  padding: 1.5rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--panel-border);
-  text-align: center;
-  background: rgba(255, 255, 255, 0.01);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.score-card.before {
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-.score-card.after {
-  border-color: rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.02);
-}
-
-.score-card .score-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 1px;
-}
-
-.score-card .score-percent {
-  font-size: 2.5rem;
-  font-weight: 800;
-}
-
-.score-card.before .score-percent {
-  color: var(--text-secondary);
-}
-
-.score-card.after .score-percent {
-  color: var(--success);
-  text-shadow: 0 0 20px var(--success-glow);
-}
-
-.score-arrow {
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .score-shift-bar-container {
   height: 8px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
   overflow: hidden;
+  margin-top: 1.5rem;
 }
 
 .score-shift-bar {
