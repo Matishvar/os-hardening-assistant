@@ -22,3 +22,13 @@ class UserProgress(models.Model):
 
     def __str__(self):
         return f"Progress for {self.rule_id} (Completed: {self.is_completed}, Included: {self.is_included_in_script})"
+
+class ScanReport(models.Model):
+    timestamp = models.DateTimeField(auto_now_add=True)
+    platform = models.CharField(max_length=20)  # 'windows' or 'linux'
+    score = models.FloatField()  # compliance percentage (0 to 100)
+    passed_checks = models.TextField()  # JSON-encoded array or comma-separated rule IDs
+    failed_checks = models.TextField()  # JSON-encoded array or comma-separated rule IDs
+
+    def __str__(self):
+        return f"Scan Report [{self.platform.upper()}] - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')} (Score: {self.score}%)"

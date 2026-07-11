@@ -28,21 +28,28 @@
         <p>Interactive compliance checklist & automated deployment script generator</p>
       </div>
 
-      <div class="platform-tabs" id="platform-tabs">
-        <button class="platform-btn active" data-platform="windows">
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle;">
-            <path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.1zM10.95 1.95L24 0v11.55H10.95V1.95zM10.95 12.45H24v11.55l-13.05-1.95v-9.6z"/>
+      <div class="header-actions">
+        <a href="/api/download-repo/" class="primary-btn download-repo-btn" title="Download clean ZIP of this repository codebase" style="text-decoration: none; padding: 0.6rem 1.2rem;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3 3m0 0l3-3m-3 3V2.25" />
           </svg>
-          Windows
-        </button>
-        <button class="platform-btn" data-platform="linux">
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle;">
-            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" style="display: none;"/>
-            <!-- Custom Linux Tux SVG icon -->
-            <path d="M12 2a10 10 0 0 0-7.8 16.2c.3.4.7.7 1.1 1a10.4 10.4 0 0 0 13.4 0c.4-.3.8-.6 1.1-1A10 10 0 0 0 12 2zm1 3.5c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm-2 0c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm1 6.5c-1.3 0-2.5-.5-3-1-.2-.2-.2-.5 0-.7a.5.5 0 0 1 .7 0c.4.4 1.3.7 2.3.7s1.9-.3 2.3-.7a.5.5 0 0 1 .7.7c-.5.5-1.7 1-3 1z"/>
-          </svg>
-          Linux
-        </button>
+          Download Repo ZIP
+        </a>
+        <div class="platform-tabs" id="platform-tabs">
+          <button class="platform-btn active" data-platform="windows">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+              <path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.1zM10.95 1.95L24 0v11.55H10.95V1.95zM10.95 12.45H24v11.55l-13.05-1.95v-9.6z"/>
+            </svg>
+            Windows
+          </button>
+          <button class="platform-btn" data-platform="linux">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+              <path d="M12 2c-5.52 0-10 4.48-10 10 0 4.75 3.31 8.72 7.75 9.75v-6.88h-2.5v-2.87h2.5v-2.18c0-2.47 1.49-3.83 3.7-3.83 1.06 0 1.97.08 2.24.11v2.59h-1.54c-1.2 0-1.43.57-1.43 1.4v1.83h2.88l-.37 2.87h-2.51v6.9c4.52-.98 7.9-4.97 7.9-9.77 0-5.52-4.48-10-10-10z" style="display:none;"/>
+              <path d="M12 2a10 10 0 0 0-7.8 16.2c.3.4.7.7 1.1 1a10.4 10.4 0 0 0 13.4 0c.4-.3.8-.6 1.1-1A10 10 0 0 0 12 2zm1 3.5c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm-2 0c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm1 6.5c-1.3 0-2.5-.5-3-1-.2-.2-.2-.5 0-.7a.5.5 0 0 1 .7 0c.4.4 1.3.7 2.3.7s1.9-.3 2.3-.7a.5.5 0 0 1 .7.7c-.5.5-1.7 1-3 1z"/>
+            </svg>
+            Linux
+          </button>
+        </div>
       </div>
     </header>
 
@@ -87,12 +94,15 @@
             <!-- Populated via Javascript -->
           </div>
 
-          <div class="bulk-actions">
+          <div class="toolbar-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; width: 100%;">
+            <button class="primary-btn scan-btn" id="scan-btn" title="Run diagnostic verification scripts on this host system">
+              ⚡ Scan & Analyze System
+            </button>
             <button class="action-btn" id="toggle-all-checkboxes" title="Toggle check state for all visible rules">
-              Toggle All Checks
+              Toggle Checks
             </button>
             <button class="action-btn" id="toggle-all-script" title="Toggle script inclusion for all visible rules">
-              Toggle All Scripts
+              Toggle Scripts
             </button>
           </div>
         </div>
@@ -132,7 +142,69 @@
     </div>
   </div>
 
-  <!-- Dynamic floating toast container -->
+  <!-- Loading / Scanning Overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loader-content glass-panel" style="padding: 3rem; text-align: center; border-radius: var(--radius-lg);">
+      <div class="spinner"></div>
+      <h3 style="margin-top: 1.5rem; font-size: 1.5rem; font-weight: 600;">Auditing Local System Configurations...</h3>
+      <p style="color: var(--text-secondary); margin-top: 0.5rem;">Running secure local diagnostics in the background</p>
+    </div>
+  </div>
+
+  <!-- Before vs After Scan Report Modal -->
+  <div class="modal-overlay" id="report-modal">
+    <div class="modal-content glass-panel">
+      <div class="modal-header">
+        <h2>
+          📊 Scan & Analysis Report
+        </h2>
+        <button class="close-modal-btn" id="close-modal-btn" title="Close report modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="scan-time">Scan completed on: <span id="report-timestamp">-</span></p>
+        
+        <!-- Compliance score shift gauge -->
+        <div class="comparison-scores">
+          <div class="score-card before">
+            <span class="score-label">BEFORE SCAN</span>
+            <span class="score-percent" id="report-before-score">0%</span>
+          </div>
+          <div class="score-arrow">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path>
+            </svg>
+          </div>
+          <div class="score-card after">
+            <span class="score-label">AFTER SCAN</span>
+            <span class="score-percent" id="report-after-score">0%</span>
+          </div>
+        </div>
+
+        <div class="score-shift-bar-container">
+          <div class="score-shift-bar" id="score-shift-bar"></div>
+        </div>
+        <p class="shift-summary" id="shift-summary">Compliance rating increased by 0%</p>
+
+        <!-- Detailed Lists of resolved vs failed items -->
+        <div class="report-details-lists">
+          <div class="details-list-box success-list">
+            <h3>✅ Active / Compliant Controls</h3>
+            <ul id="report-resolved-list">
+              <li>No resolved items.</li>
+            </ul>
+          </div>
+          <div class="details-list-box danger-list">
+            <h3>⚠️ Vulnerable / Pending Controls</h3>
+            <ul id="report-failed-list">
+              <li>No remaining issues!</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating copy status indicator -->
   <div class="toast" id="toast">
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" style="display:inline-block; vertical-align:middle; margin-right:4px;">
       <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

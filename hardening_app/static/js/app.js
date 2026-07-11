@@ -45,7 +45,22 @@ function cacheDOMElements() {
     toggleAllCheckboxesBtn: document.getElementById("toggle-all-checkboxes"),
     toggleAllScriptBtn: document.getElementById("toggle-all-script"),
     toast: document.getElementById("toast"),
-    csrfInput: document.getElementById("csrf-token")
+    csrfInput: document.getElementById("csrf-token"),
+    
+    // Scanner elements
+    scanBtn: document.getElementById("scan-btn"),
+    loadingOverlay: document.getElementById("loading-overlay"),
+    reportModal: document.getElementById("report-modal"),
+    closeModalBtn: document.getElementById("close-modal-btn"),
+    
+    // Report fields
+    reportTimestamp: document.getElementById("report-timestamp"),
+    reportBeforeScore: document.getElementById("report-before-score"),
+    reportAfterScore: document.getElementById("report-after-score"),
+    scoreShiftBar: document.getElementById("score-shift-bar"),
+    shiftSummary: document.getElementById("shift-summary"),
+    reportResolvedList: document.getElementById("report-resolved-list"),
+    reportFailedList: document.getElementById("report-failed-list")
   };
 }
 
@@ -95,7 +110,6 @@ function bindEvents() {
     const visible = getFilteredRules();
     if (visible.length === 0) return;
     
-    // Determine if we should check all or uncheck all
     const hasUnchecked = visible.some(r => !r.isCompleted);
     const action = hasUnchecked ? 'check_all' : 'uncheck_all';
     
@@ -115,7 +129,6 @@ function bindEvents() {
       
       const res = await response.json();
       if (res.success) {
-        // Update local memory state
         visible.forEach(r => {
           r.isCompleted = hasUnchecked;
         });
@@ -154,7 +167,6 @@ function bindEvents() {
       
       const res = await response.json();
       if (res.success) {
-        // Update local memory state
         visible.forEach(r => {
           r.isIncluded = hasExcluded;
         });
@@ -182,6 +194,83 @@ function bindEvents() {
   elements.downloadBtn.addEventListener("click", () => {
     window.location.href = `/download-script/${state.selectedPlatform}/`;
     showToast("Downloading file...");
+  });
+
+  // --- Automated Scanner Actions ---
+
+  elements.scanBtn.addEventListener("click", async () => {
+    // Show spinner overlay
+    elements.loadingOverlay.classList.add("active");
+    
+    try {
+      const response = await fetch('/api/scan/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ platform: state.selectedPlatform })
+      });
+      
+      const res = await response.json();
+      elements.loadingOverlay.classList.remove("active");
+      
+      if (res.success) {
+        const report = res.report;
+        
+        // Populate modal report fields
+        elements.reportTimestamp.textContent = report.timestamp;
+        elements.reportBeforeScore.textContent = `${report.before_score}%`;
+        elements.reportAfterScore.textContent = `${report.after_score}%`;
+        
+        // Update shift indicator bar
+        elements.scoreShiftBar.style.width = `${report.after_score}%`;
+        
+        // Score difference summary
+        const diff = report.after_score - report.before_score;
+        const sign = diff >= 0 ? "+" : "";
+        elements.shiftSummary.textContent = `Compliance score changed by ${sign}${diff}%`;
+        
+        // Populate resolved rules list
+        if (report.resolved_rules.length === 0) {
+          elements.reportResolvedList.innerHTML = "<li>No new controls resolved in this scan.</li>";
+        } else {
+          elements.reportResolvedList.innerHTML = report.resolved_rules
+            .map(title => `<li>${title}</li>`).join("");
+        }
+        
+        // Populate remaining vulnerability list
+        if (report.still_failed_rules.length === 0) {
+          elements.reportFailedList.innerHTML = "<li style='color: var(--success);'>All checks passed! System fully compliant.</li>";
+        } else {
+          elements.reportFailedList.innerHTML = report.still_failed_rules
+            .map(title => `<li>${title}</li>`).join("");
+        }
+        
+        // Open report modal
+        elements.reportModal.classList.add("active");
+      } else {
+        showToast("Scan failed: " + res.error, true);
+      }
+    } catch (err) {
+      elements.loadingOverlay.classList.remove("active");
+      showToast("Network error executing scan: " + err, true);
+    }
+  });
+
+  // Close report modal and refresh page to load new DB state
+  elements.closeModalBtn.addEventListener("click", () => {
+    elements.reportModal.classList.remove("active");
+    // Reload page to automatically update all checkbox visual states from SQLite
+    window.location.reload();
+  });
+  
+  // Close modal when clicking background overlay
+  elements.reportModal.addEventListener("click", (e) => {
+    if (e.target === elements.reportModal) {
+      elements.reportModal.classList.remove("active");
+      window.location.reload();
+    }
   });
 }
 
@@ -297,7 +386,6 @@ window.toggleCheck = async function(id, event) {
     if (res.success) {
       rule.isCompleted = res.is_completed;
       
-      // Update element class directly
       const card = document.querySelector(`.checklist-item[data-id="${id}"]`);
       if (card) {
         if (rule.isCompleted) {
