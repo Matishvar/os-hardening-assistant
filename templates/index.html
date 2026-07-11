@@ -95,8 +95,8 @@
           </div>
 
           <div class="toolbar-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; width: 100%;">
-            <button class="primary-btn scan-btn" id="scan-btn" title="Run diagnostic checks concurrently across Windows & Linux rules">
-              ⚡ Scan Everything (Dual-OS Audit)
+            <button class="primary-btn scan-btn" id="scan-btn" title="Run local audits on host for the selected platform">
+              ⚡ Scan & Analyze System
             </button>
             <button class="action-btn" id="toggle-all-checkboxes" title="Toggle check state for all visible rules">
               Toggle Checks
@@ -146,8 +146,8 @@
   <div class="loading-overlay" id="loading-overlay">
     <div class="loader-content glass-panel" style="padding: 3rem; text-align: center; border-radius: var(--radius-lg);">
       <div class="spinner"></div>
-      <h3 style="margin-top: 1.5rem; font-size: 1.5rem; font-weight: 600;">Auditing All OS Security Settings...</h3>
-      <p style="color: var(--text-secondary); margin-top: 0.5rem;">Running simultaneous dual-platform scans in background</p>
+      <h3 style="margin-top: 1.5rem; font-size: 1.5rem; font-weight: 600;">Auditing Local OS Configurations...</h3>
+      <p style="color: var(--text-secondary); margin-top: 0.5rem;">Running system diagnostic scripts in background</p>
     </div>
   </div>
 
@@ -156,10 +156,10 @@
     <div class="modal-content glass-panel">
       <div class="modal-header">
         <h2>
-          📊 Scan & Analysis Report
+          📊 <span id="report-platform-title">Windows</span> Compliance Report
         </h2>
         <div class="modal-header-actions" style="display: flex; gap: 1rem; align-items: center;">
-          <a href="/api/download-pdf/" class="primary-btn download-pdf-btn" style="text-decoration: none; padding: 0.45rem 1rem; font-size: 0.82rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);" title="Download full printable PDF audit report">
+          <a href="#" id="download-pdf-btn" class="primary-btn download-pdf-btn" style="text-decoration: none; padding: 0.45rem 1rem; font-size: 0.82rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);" title="Download full printable PDF audit report for this platform">
             📥 Download PDF Report
           </a>
           <button class="close-modal-btn" id="close-modal-btn" title="Close report modal">&times;</button>
@@ -168,57 +168,21 @@
       <div class="modal-body">
         <p class="scan-time">Scan completed on: <span id="report-timestamp">-</span></p>
         
-        <!-- Dual OS score comparison layout -->
-        <div class="comparison-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
-          
-          <!-- Global Comparison -->
-          <div class="comparison-score-card global-card" style="padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--panel-border); background: rgba(99, 102, 241, 0.03); text-align: center;">
-            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 0.75rem;">Global Compliance</h4>
-            <div class="score-values" style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 0.7rem; color: var(--text-muted);">Before</span>
-                <span style="font-size: 1.3rem; font-weight: 700; color: var(--text-secondary);" id="report-global-before">0%</span>
-              </div>
-              <span style="color: var(--text-muted); font-size: 1rem;">➔</span>
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 0.7rem; color: var(--text-muted);">After</span>
-                <span style="font-size: 1.5rem; font-weight: 800; color: var(--primary);" id="report-global-after">0%</span>
-              </div>
-            </div>
+        <!-- Score Comparison Gauge -->
+        <div class="comparison-scores" style="display: flex; align-items: center; justify-content: space-between; margin: 1.5rem 0; gap: 1.5rem;">
+          <div class="score-card before" style="flex: 1; padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid rgba(239, 68, 68, 0.2); text-align: center; background: rgba(255, 255, 255, 0.01); display: flex; flex-direction: column; gap: 0.5rem;">
+            <span class="score-label" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 1px;">BEFORE SCAN</span>
+            <span class="score-percent" id="report-before-score" style="font-size: 2.5rem; font-weight: 800; color: var(--text-secondary);">0%</span>
           </div>
-
-          <!-- Windows Comparison -->
-          <div class="comparison-score-card windows-card" style="padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--panel-border); background: rgba(255, 255, 255, 0.01); text-align: center;">
-            <h4 style="font-size: 0.85rem; font-weight: 700; color: #60a5fa; text-transform: uppercase; margin-bottom: 0.75rem;">Windows OS</h4>
-            <div class="score-values" style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 0.7rem; color: var(--text-muted);">Before</span>
-                <span style="font-size: 1.3rem; font-weight: 700; color: var(--text-secondary);" id="report-win-before">0%</span>
-              </div>
-              <span style="color: var(--text-muted); font-size: 1rem;">➔</span>
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 0.7rem; color: var(--text-muted);">After</span>
-                <span style="font-size: 1.5rem; font-weight: 800; color: #60a5fa;" id="report-win-after">0%</span>
-              </div>
-            </div>
+          <div class="score-arrow" style="color: var(--text-muted); display: flex; align-items: center; justify-content: center;">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path>
+            </svg>
           </div>
-
-          <!-- Linux Comparison -->
-          <div class="comparison-score-card linux-card" style="padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--panel-border); background: rgba(255, 255, 255, 0.01); text-align: center;">
-            <h4 style="font-size: 0.85rem; font-weight: 700; color: #34d399; text-transform: uppercase; margin-bottom: 0.75rem;">Linux OS</h4>
-            <div class="score-values" style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 0.7rem; color: var(--text-muted);">Before</span>
-                <span style="font-size: 1.3rem; font-weight: 700; color: var(--text-secondary);" id="report-lin-before">0%</span>
-              </div>
-              <span style="color: var(--text-muted); font-size: 1rem;">➔</span>
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 0.7rem; color: var(--text-muted);">After</span>
-                <span style="font-size: 1.5rem; font-weight: 800; color: #34d399;" id="report-lin-after">0%</span>
-              </div>
-            </div>
+          <div class="score-card after" style="flex: 1; padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid rgba(16, 185, 129, 0.35); text-align: center; background: rgba(16, 185, 129, 0.02); display: flex; flex-direction: column; gap: 0.5rem;">
+            <span class="score-label" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 1px;">AFTER SCAN</span>
+            <span class="score-percent" id="report-after-score" style="font-size: 2.5rem; font-weight: 800; color: var(--success); text-shadow: 0 0 20px var(--success-glow);">0%</span>
           </div>
-
         </div>
 
         <div class="score-shift-bar-container">
