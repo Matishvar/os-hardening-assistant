@@ -1,0 +1,185 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS Hardening Assistant</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- CSRF Token for JavaScript AJAX calls -->
+  <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+
+  <div class="app-container">
+    <header class="glass-panel">
+      <div class="logo-section">
+        <h1>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #818cf8; vertical-align: middle;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          OS Hardening Assistant
+        </h1>
+        <p>Interactive compliance checklist & automated deployment script generator</p>
+      </div>
+
+      <div class="platform-tabs" id="platform-tabs">
+        <button class="platform-btn active" data-platform="windows">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle;">
+            <path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.1zM10.95 1.95L24 0v11.55H10.95V1.95zM10.95 12.45H24v11.55l-13.05-1.95v-9.6z"/>
+          </svg>
+          Windows
+        </button>
+        <button class="platform-btn" data-platform="linux">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle;">
+            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" style="display: none;"/>
+            <!-- Custom Linux Tux SVG icon -->
+            <path d="M12 2a10 10 0 0 0-7.8 16.2c.3.4.7.7 1.1 1a10.4 10.4 0 0 0 13.4 0c.4-.3.8-.6 1.1-1A10 10 0 0 0 12 2zm1 3.5c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm-2 0c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm1 6.5c-1.3 0-2.5-.5-3-1-.2-.2-.2-.5 0-.7a.5.5 0 0 1 .7 0c.4.4 1.3.7 2.3.7s1.9-.3 2.3-.7a.5.5 0 0 1 .7.7c-.5.5-1.7 1-3 1z"/>
+          </svg>
+          Linux
+        </button>
+      </div>
+    </header>
+
+    <div class="dashboard-grid">
+      <!-- Left Pane: Checklist controls & items -->
+      <div class="checklist-pane">
+        <!-- Progress Widgets -->
+        <div class="dashboard-summary">
+          <div class="summary-card glass-panel progress-widget">
+            <div class="icon-box">🛡️</div>
+            <div class="info">
+              <span class="label">Compliance</span>
+              <span class="value" id="progress-value">0%</span>
+            </div>
+          </div>
+          <div class="summary-card glass-panel completed-widget">
+            <div class="icon-box">✅</div>
+            <div class="info">
+              <span class="label">Completed</span>
+              <span class="value" id="completed-value">0</span>
+            </div>
+          </div>
+          <div class="summary-card glass-panel pending-widget">
+            <div class="icon-box">⚠️</div>
+            <div class="info">
+              <span class="label">Pending</span>
+              <span class="value" id="pending-value">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toolbar & Filter Panels -->
+        <div class="toolbar glass-panel">
+          <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input type="text" id="search-input" placeholder="Search hardening controls (e.g., firewall, password)...">
+          </div>
+
+          <div class="filter-group" id="filter-group">
+            <!-- Populated via Javascript -->
+          </div>
+
+          <div class="bulk-actions">
+            <button class="action-btn" id="toggle-all-checkboxes" title="Toggle check state for all visible rules">
+              Toggle All Checks
+            </button>
+            <button class="action-btn" id="toggle-all-script" title="Toggle script inclusion for all visible rules">
+              Toggle All Scripts
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive checklist list -->
+        <div class="checklist" id="checklist">
+          <!-- Populated dynamically by app.js from Django data -->
+        </div>
+      </div>
+
+      <!-- Right Pane: Script Viewer & Compiler -->
+      <div class="script-pane glass-panel">
+        <div class="pane-header">
+          <h2>
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"></path>
+            </svg>
+            Script Generator
+          </h2>
+          <div class="script-actions">
+            <button class="action-btn" id="copy-btn" title="Copy code to clipboard">
+              Copy Code
+            </button>
+            <button class="primary-btn" id="download-btn" title="Download executable script">
+              Download Script
+            </button>
+          </div>
+        </div>
+
+        <div class="code-viewer-container">
+          <div class="code-viewer-header">
+            <span class="file-name" id="file-name">win-hardening.ps1</span>
+          </div>
+          <textarea class="code-viewer" id="code-viewer" readonly></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic floating toast container -->
+  <div class="toast" id="toast">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" style="display:inline-block; vertical-align:middle; margin-right:4px;">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span>Text copied to clipboard</span>
+  </div>
+
+  <!-- Pass data from Django backend to JavaScript state -->
+  <script id="django-rules-data" type="application/json">
+    {
+      "windows": [
+        {% for rule in windows_rules %}
+          {
+            "id": "{{ rule.id }}",
+            "title": "{{ rule.title|escapejs }}",
+            "category": "{{ rule.category|escapejs }}",
+            "severity": "{{ rule.severity }}",
+            "description": "{{ rule.description|escapejs }}",
+            "rationale": "{{ rule.rationale|escapejs }}",
+            "verification": "{{ rule.verification|escapejs }}",
+            "remediation": "{{ rule.remediation|escapejs }}",
+            "scriptCode": "{{ rule.script_code|escapejs }}",
+            "isCompleted": {% if rule.progress.is_completed %}true{% else %}false{% endif %},
+            "isIncluded": {% if rule.progress.is_included_in_script %}true{% else %}false{% endif %}
+          }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "linux": [
+        {% for rule in linux_rules %}
+          {
+            "id": "{{ rule.id }}",
+            "title": "{{ rule.title|escapejs }}",
+            "category": "{{ rule.category|escapejs }}",
+            "severity": "{{ rule.severity }}",
+            "description": "{{ rule.description|escapejs }}",
+            "rationale": "{{ rule.rationale|escapejs }}",
+            "verification": "{{ rule.verification|escapejs }}",
+            "remediation": "{{ rule.remediation|escapejs }}",
+            "scriptCode": "{{ rule.script_code|escapejs }}",
+            "isCompleted": {% if rule.progress.is_completed %}true{% else %}false{% endif %},
+            "isIncluded": {% if rule.progress.is_included_in_script %}true{% else %}false{% endif %}
+          }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }
+  </script>
+
+  <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>
