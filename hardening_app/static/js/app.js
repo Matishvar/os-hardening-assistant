@@ -23,10 +23,10 @@ let elements = {};
 function init() {
   cacheDOMElements();
   bindEvents();
-  renderFilters();
-  renderChecklist();
-  updateDashboard();
-  generateScriptPreview();
+  if (elements.filterGroup) renderFilters();
+  if (elements.checklist) renderChecklist();
+  if (elements.progressValue) updateDashboard();
+  if (elements.codeViewer) generateScriptPreview();
 }
 
 function cacheDOMElements() {
@@ -72,210 +72,243 @@ function getCsrfToken() {
 
 function bindEvents() {
   // Platform switching tabs
-  elements.platformTabs.addEventListener("click", (e) => {
-    const btn = e.target.closest(".platform-btn");
-    if (!btn || btn.classList.contains("active")) return;
-    
-    elements.platformTabs.querySelectorAll(".platform-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    
-    state.selectedPlatform = btn.dataset.platform;
-    state.expandedRuleId = null;
-    state.activeCategoryFilter = "all";
-    
-    renderFilters();
-    renderChecklist();
-    updateDashboard();
-    generateScriptPreview();
-  });
+  if (elements.platformTabs) {
+    elements.platformTabs.addEventListener("click", (e) => {
+      const btn = e.target.closest(".platform-btn");
+      if (!btn || btn.classList.contains("active")) return;
+      
+      elements.platformTabs.querySelectorAll(".platform-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      
+      state.selectedPlatform = btn.dataset.platform;
+      state.expandedRuleId = null;
+      state.activeCategoryFilter = "all";
+      
+      if (elements.filterGroup) renderFilters();
+      if (elements.checklist) renderChecklist();
+      updateDashboard();
+      generateScriptPreview();
+    });
+  }
 
   // Search input matching
-  elements.searchBox.addEventListener("input", (e) => {
-    state.searchTerm = e.target.value.toLowerCase();
-    renderChecklist();
-  });
+  if (elements.searchBox) {
+    elements.searchBox.addEventListener("input", (e) => {
+      state.searchTerm = e.target.value.toLowerCase();
+      renderChecklist();
+    });
+  }
 
   // Filter category buttons
-  elements.filterGroup.addEventListener("click", (e) => {
-    const btn = e.target.closest(".filter-btn");
-    if (!btn) return;
-    
-    elements.filterGroup.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    
-    state.activeCategoryFilter = btn.dataset.category;
-    renderChecklist();
-  });
+  if (elements.filterGroup) {
+    elements.filterGroup.addEventListener("click", (e) => {
+      const btn = e.target.closest(".filter-btn");
+      if (!btn) return;
+      
+      elements.filterGroup.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      
+      state.activeCategoryFilter = btn.dataset.category;
+      renderChecklist();
+    });
+  }
 
   // Bulk Checks toggle
-  elements.toggleAllCheckboxesBtn.addEventListener("click", async () => {
-    const visible = getFilteredRules();
-    if (visible.length === 0) return;
-    
-    const hasUnchecked = visible.some(r => !r.isCompleted);
-    const action = hasUnchecked ? 'check_all' : 'uncheck_all';
-    
-    try {
-      const response = await fetch('/api/bulk-actions/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-          platform: state.selectedPlatform,
-          action: action,
-          category: state.activeCategoryFilter
-        })
-      });
+  if (elements.toggleAllCheckboxesBtn) {
+    elements.toggleAllCheckboxesBtn.addEventListener("click", async () => {
+      const visible = getFilteredRules();
+      if (visible.length === 0) return;
       
-      const res = await response.json();
-      if (res.success) {
-        visible.forEach(r => {
-          r.isCompleted = hasUnchecked;
+      const hasUnchecked = visible.some(r => !r.isCompleted);
+      const action = hasUnchecked ? 'check_all' : 'uncheck_all';
+      
+      try {
+        const response = await fetch('/api/bulk-actions/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            platform: state.selectedPlatform,
+            action: action,
+            category: state.activeCategoryFilter
+          })
         });
-        renderChecklist();
-        updateDashboard();
-        showToast(hasUnchecked ? "Checked all visible items" : "Unchecked all visible items");
-      } else {
-        showToast("Error executing bulk action: " + res.error, true);
+        
+        const res = await response.json();
+        if (res.success) {
+          visible.forEach(r => {
+            r.isCompleted = hasUnchecked;
+          });
+          renderChecklist();
+          updateDashboard();
+          showToast(hasUnchecked ? "Checked all visible items" : "Unchecked all visible items");
+        } else {
+          showToast("Error executing bulk action: " + res.error, true);
+        }
+      } catch (err) {
+        showToast("Network error: " + err, true);
       }
-    } catch (err) {
-      showToast("Network error: " + err, true);
-    }
-  });
+    });
+  }
 
   // Bulk Scripts toggle
-  elements.toggleAllScriptBtn.addEventListener("click", async () => {
-    const visible = getFilteredRules();
-    if (visible.length === 0) return;
-    
-    const hasExcluded = visible.some(r => !r.isIncluded);
-    const action = hasExcluded ? 'include_all' : 'exclude_all';
-    
-    try {
-      const response = await fetch('/api/bulk-actions/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({
-          platform: state.selectedPlatform,
-          action: action,
-          category: state.activeCategoryFilter
-        })
-      });
+  if (elements.toggleAllScriptBtn) {
+    elements.toggleAllScriptBtn.addEventListener("click", async () => {
+      const visible = getFilteredRules();
+      if (visible.length === 0) return;
       
-      const res = await response.json();
-      if (res.success) {
-        visible.forEach(r => {
-          r.isIncluded = hasExcluded;
+      const hasExcluded = visible.some(r => !r.isIncluded);
+      const action = hasExcluded ? 'include_all' : 'exclude_all';
+      
+      try {
+        const response = await fetch('/api/bulk-actions/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({
+            platform: state.selectedPlatform,
+            action: action,
+            category: state.activeCategoryFilter
+          })
         });
-        renderChecklist();
-        generateScriptPreview();
-        showToast(hasExcluded ? "Included all visible scripts" : "Excluded all visible scripts");
-      } else {
-        showToast("Error executing bulk action: " + res.error, true);
+        
+        const res = await response.json();
+        if (res.success) {
+          visible.forEach(r => {
+            r.isIncluded = hasExcluded;
+          });
+          renderChecklist();
+          generateScriptPreview();
+          showToast(hasExcluded ? "Included all visible scripts" : "Excluded all visible scripts");
+        } else {
+          showToast("Error executing bulk action: " + res.error, true);
+        }
+      } catch (err) {
+        showToast("Network error: " + err, true);
       }
-    } catch (err) {
-      showToast("Network error: " + err, true);
-    }
-  });
+    });
+  }
 
   // Copy code to Clipboard
-  elements.copyBtn.addEventListener("click", () => {
-    navigator.clipboard.writeText(elements.codeViewer.value).then(() => {
-      showToast("Script copied to clipboard!");
-    }).catch(err => {
-      showToast("Copy failed: " + err, true);
+  if (elements.copyBtn) {
+    elements.copyBtn.addEventListener("click", () => {
+      if (!elements.codeViewer) return;
+      navigator.clipboard.writeText(elements.codeViewer.value).then(() => {
+        showToast("Script copied to clipboard!");
+      }).catch(err => {
+        showToast("Copy failed: " + err, true);
+      });
     });
-  });
+  }
 
   // Download script file from Django backend
-  elements.downloadBtn.addEventListener("click", () => {
-    window.location.href = `/download-script/${state.selectedPlatform}/`;
-    showToast("Downloading file...");
-  });
+  if (elements.downloadBtn) {
+    elements.downloadBtn.addEventListener("click", () => {
+      window.location.href = `/download-script/${state.selectedPlatform}/`;
+      showToast("Downloading file...");
+    });
+  }
 
   // --- Automated Scanner Actions ---
 
-  elements.scanBtn.addEventListener("click", async () => {
-    elements.loadingOverlay.classList.add("active");
-    
-    try {
-      const response = await fetch('/api/scan/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCsrfToken()
-        },
-        body: JSON.stringify({ platform: state.selectedPlatform })
-      });
+  if (elements.scanBtn) {
+    elements.scanBtn.addEventListener("click", async () => {
+      if (elements.loadingOverlay) elements.loadingOverlay.classList.add("active");
       
-      const res = await response.json();
-      elements.loadingOverlay.classList.remove("active");
-      
-      if (res.success) {
-        const report = res.report;
+      try {
+        const response = await fetch('/api/scan/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ platform: state.selectedPlatform })
+        });
         
-        // Populate modal report fields
-        elements.reportPlatformTitle.textContent = state.selectedPlatform === 'windows' ? 'Windows' : 'Linux';
-        elements.reportTimestamp.textContent = report.timestamp;
-        elements.reportBeforeScore.textContent = `${report.before_score}%`;
-        elements.reportAfterScore.textContent = `${report.after_score}%`;
+        const res = await response.json();
+        if (elements.loadingOverlay) elements.loadingOverlay.classList.remove("active");
         
-        // Update PDF download link href for the specific platform
-        elements.downloadPdfBtn.href = `/api/download-pdf/${state.selectedPlatform}/`;
-        
-        // Update shift indicator bar
-        elements.scoreShiftBar.style.width = `${report.after_score}%`;
-        
-        // Score difference summary
-        const diff = report.after_score - report.before_score;
-        const sign = diff >= 0 ? "+" : "";
-        elements.shiftSummary.textContent = `${state.selectedPlatform === 'windows' ? 'Windows' : 'Linux'} compliance score changed by ${sign}${diff}%`;
-        
-        // Populate resolved rules list
-        if (report.resolved_rules.length === 0) {
-          elements.reportResolvedList.innerHTML = "<li>No new controls resolved in this scan.</li>";
+        if (res.success) {
+          const report = res.report;
+          
+          // Populate modal report fields if available
+          if (elements.reportPlatformTitle) {
+            elements.reportPlatformTitle.textContent = state.selectedPlatform === 'windows' ? 'Windows' : 'Linux';
+          }
+          if (elements.reportTimestamp) elements.reportTimestamp.textContent = report.timestamp;
+          if (elements.reportBeforeScore) elements.reportBeforeScore.textContent = `${report.before_score}%`;
+          if (elements.reportAfterScore) elements.reportAfterScore.textContent = `${report.after_score}%`;
+          
+          // Update PDF download link href for the specific platform
+          if (elements.downloadPdfBtn) {
+            elements.downloadPdfBtn.href = `/api/download-pdf/${state.selectedPlatform}/`;
+          }
+          
+          // Update shift indicator bar
+          if (elements.scoreShiftBar) {
+            elements.scoreShiftBar.style.width = `${report.after_score}%`;
+          }
+          
+          // Score difference summary
+          if (elements.shiftSummary) {
+            const diff = report.after_score - report.before_score;
+            const sign = diff >= 0 ? "+" : "";
+            elements.shiftSummary.textContent = `${state.selectedPlatform === 'windows' ? 'Windows' : 'Linux'} compliance score changed by ${sign}${diff}%`;
+          }
+          
+          // Populate resolved rules list
+          if (elements.reportResolvedList) {
+            if (report.resolved_rules.length === 0) {
+              elements.reportResolvedList.innerHTML = "<li>No new controls resolved in this scan.</li>";
+            } else {
+              elements.reportResolvedList.innerHTML = report.resolved_rules
+                .map(title => `<li>${title}</li>`).join("");
+            }
+          }
+          
+          // Populate remaining vulnerability list
+          if (elements.reportFailedList) {
+            if (report.still_failed_rules.length === 0) {
+              elements.reportFailedList.innerHTML = "<li style='color: var(--success);'>All checks passed! System fully compliant.</li>";
+            } else {
+              elements.reportFailedList.innerHTML = report.still_failed_rules
+                .map(title => `<li>${title}</li>`).join("");
+            }
+          }
+          
+          // Open report modal
+          if (elements.reportModal) elements.reportModal.classList.add("active");
         } else {
-          elements.reportResolvedList.innerHTML = report.resolved_rules
-            .map(title => `<li>${title}</li>`).join("");
+          showToast("Scan failed: " + res.error, true);
         }
-        
-        // Populate remaining vulnerability list
-        if (report.still_failed_rules.length === 0) {
-          elements.reportFailedList.innerHTML = "<li style='color: var(--success);'>All checks passed! System fully compliant.</li>";
-        } else {
-          elements.reportFailedList.innerHTML = report.still_failed_rules
-            .map(title => `<li>${title}</li>`).join("");
-        }
-        
-        // Open report modal
-        elements.reportModal.classList.add("active");
-      } else {
-        showToast("Scan failed: " + res.error, true);
+      } catch (err) {
+        if (elements.loadingOverlay) elements.loadingOverlay.classList.remove("active");
+        showToast("Network error executing scan: " + err, true);
       }
-    } catch (err) {
-      elements.loadingOverlay.classList.remove("active");
-      showToast("Network error executing scan: " + err, true);
-    }
-  });
+    });
+  }
 
   // Close report modal and refresh page to load new DB state
-  elements.closeModalBtn.addEventListener("click", () => {
-    elements.reportModal.classList.remove("active");
-    window.location.reload();
-  });
+  if (elements.closeModalBtn) {
+    elements.closeModalBtn.addEventListener("click", () => {
+      if (elements.reportModal) elements.reportModal.classList.remove("active");
+      window.location.reload();
+    });
+  }
   
   // Close modal when clicking background overlay
-  elements.reportModal.addEventListener("click", (e) => {
-    if (e.target === elements.reportModal) {
-      elements.reportModal.classList.remove("active");
-      window.location.reload();
-    }
-  });
+  if (elements.reportModal) {
+    elements.reportModal.addEventListener("click", (e) => {
+      if (e.target === elements.reportModal) {
+        elements.reportModal.classList.remove("active");
+        window.location.reload();
+      }
+    });
+  }
 }
 
 function getFilteredRules() {
@@ -290,6 +323,7 @@ function getFilteredRules() {
 }
 
 function renderFilters() {
+  if (!elements.filterGroup) return;
   const allRules = rulesData[state.selectedPlatform] || [];
   const categories = ["all", ...new Set(allRules.map(r => r.category))];
   
@@ -304,6 +338,7 @@ function renderFilters() {
 }
 
 function renderChecklist() {
+  if (!elements.checklist) return;
   const filtered = getFilteredRules();
   
   if (filtered.length === 0) {
@@ -452,20 +487,22 @@ window.toggleScriptInclusion = async function(id, checked) {
 };
 
 function updateDashboard() {
+  if (!elements.progressValue) return;
   const rules = rulesData[state.selectedPlatform] || [];
   const total = rules.length;
   const completed = rules.filter(r => r.isCompleted).length;
   const pending = total - completed;
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   
-  elements.progressValue.textContent = `${percentage}%`;
-  elements.completedValue.textContent = completed;
-  elements.pendingValue.textContent = pending;
+  if (elements.progressValue) elements.progressValue.textContent = `${percentage}%`;
+  if (elements.completedValue) elements.completedValue.textContent = completed;
+  if (elements.pendingValue) elements.pendingValue.textContent = pending;
 }
 
 function generateScriptPreview() {
+  if (!elements.codeViewer) return;
   const isWin = state.selectedPlatform === "windows";
-  elements.fileName.textContent = isWin ? "win-hardening.ps1" : "linux-hardening.sh";
+  if (elements.fileName) elements.fileName.textContent = isWin ? "win-hardening.ps1" : "linux-hardening.sh";
   
   const rules = rulesData[state.selectedPlatform] || [];
   const selectedRules = rules.filter(r => r.isIncluded);
@@ -557,6 +594,7 @@ echo "=========================================="
 }
 
 function showToast(message, isError = false) {
+  if (!elements.toast) return;
   const toastText = elements.toast.querySelector("span");
   if (toastText) toastText.textContent = message;
   
