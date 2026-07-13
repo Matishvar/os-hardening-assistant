@@ -21,44 +21,8 @@
         <th style="padding: 1rem 1.5rem; color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Actions</th>
       </tr>
     </thead>
-    <tbody>
-      {% for report in reports %}
-      <tr style="border-bottom: 1px solid var(--panel-border); transition: background var(--transition-fast);">
-        <td style="padding: 1.2rem 1.5rem; font-family: var(--font-mono); font-size: 0.88rem; color: var(--text-primary);">
-          {{ report.timestamp|date:"Y-m-d H:i:s" }}
-        </td>
-        <td style="padding: 1.2rem 1.5rem;">
-          <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--panel-border); font-size: 0.72rem; padding: 0.25rem 0.75rem; border-radius: 30px;">
-            {% if report.platform == 'windows' %}
-              💻 WINDOWS OS
-            {% elif report.platform == 'linux' %}
-              🐧 LINUX OS
-            {% else %}
-              🛡️ COMBINED OS
-            {% endif %}
-          </span>
-        </td>
-        <td style="padding: 1.2rem 1.5rem; font-weight: 700; font-size: 1.1rem; color: {% if report.score >= 80 %}var(--success){% elif report.score >= 50 %}var(--warning){% else %}var(--danger){% endif %};">
-          {{ report.score }}%
-        </td>
-        <td style="padding: 1.2rem 1.5rem; text-align: right;">
-          <a href="{% url 'download_pdf' platform=report.platform %}" class="primary-btn" style="display: inline-flex; text-decoration: none; padding: 0.45rem 1.2rem; font-size: 0.8rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 600; border-radius: var(--radius-sm); align-items: center; gap: 0.25rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);" title="Download compiled PDF certificate for this run">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            Download PDF
-          </a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="4" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
-          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📁</div>
-          <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">No scans recorded yet</h4>
-          <p style="font-size: 0.85rem; color: var(--text-secondary);">Audit your configurations on the dashboard to register a security record.</p>
-        </td>
-      </tr>
-      {% endfor %}
+    <tbody id="history-logs-tbody">
+      <!-- Populated dynamically via localStorage in app.js to persist scans across Vercel stateless lifecycles -->
     </tbody>
   </table>
 </div>

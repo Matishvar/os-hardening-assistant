@@ -271,6 +271,9 @@ function bindEvents() {
         if (res.success) {
           const report = res.report;
           
+          // Save scan details to client side localStorage
+          saveScanToHistory(state.selectedPlatform, report.after_score, report.timestamp);
+          
           // Populate modal report fields if available
           if (elements.reportPlatformTitle) {
             elements.reportPlatformTitle.textContent = state.selectedPlatform.toUpperCase();
@@ -709,7 +712,83 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
+function saveScanToHistory(platform, score, timestamp) {
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem("assistant_scan_history") || "[]");
+  } catch (e) {
+    console.error("Failed to parse scan history", e);
+  }
+  
+  history.unshift({
+    platform: platform,
+    score: score,
+    timestamp: timestamp || new Date().toLocaleString()
+  });
+  
+  if (history.length > 50) {
+    history = history.slice(0, 50);
+  }
+  
+  localStorage.setItem("assistant_scan_history", JSON.stringify(history));
+}
+
+function renderHistoryFromLocalStorage() {
+  const tbody = document.getElementById("history-logs-tbody");
+  if (!tbody) return;
+  
+  let history = [];
+  try {
+    history = JSON.parse(localStorage.getItem("assistant_scan_history") || "[]");
+  } catch (e) {
+    console.error("Failed to read scan history", e);
+  }
+  
+  if (history.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📁</div>
+          <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">No scans recorded yet</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary);">Audit your configurations on the dashboard to register a security record.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = history.map(report => {
+    const platformLabel = report.platform === 'windows' ? '💻 WINDOWS OS' : (report.platform === 'linux' ? '🐧 LINUX OS' : '📱 ANDROID OS');
+    const scoreColor = report.score >= 80 ? 'var(--success)' : (report.score >= 50 ? 'var(--warning)' : 'var(--danger)');
+    
+    return `
+      <tr style="border-bottom: 1px solid var(--panel-border); transition: background var(--transition-fast);">
+        <td style="padding: 1.2rem 1.5rem; font-family: var(--font-mono); font-size: 0.88rem; color: var(--text-primary);">
+          ${report.timestamp}
+        </td>
+        <td style="padding: 1.2rem 1.5rem;">
+          <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--panel-border); font-size: 0.72rem; padding: 0.25rem 0.75rem; border-radius: 30px;">
+            ${platformLabel}
+          </span>
+        </td>
+        <td style="padding: 1.2rem 1.5rem; font-weight: 700; font-size: 1.1rem; color: ${scoreColor};">
+          ${report.score}%
+        </td>
+        <td style="padding: 1.2rem 1.5rem; text-align: right;">
+          <a href="/api/download-pdf/${report.platform}/" class="primary-btn" style="display: inline-flex; text-decoration: none; padding: 0.45rem 1.2rem; font-size: 0.8rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 600; border-radius: var(--radius-sm); align-items: center; gap: 0.25rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);" title="Download compiled PDF certificate for this run">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 0.25rem;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download PDF
+          </a>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", () => {
   init();
+  renderHistoryFromLocalStorage();
 });

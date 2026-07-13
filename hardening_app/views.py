@@ -40,7 +40,7 @@ def ensure_default_user_and_rules():
                 "description": "Disable developer options to prevent unauthorized device access.",
                 "rationale": "Developer options allow advanced configurations like USB debugging which bypass system security locks.",
                 "verification": "Settings -> System -> Developer options (Ensure toggle is OFF)",
-                "remediation": "Toggle 'Developer Options' to OFF in system settings.",
+                "remediation": "Open Settings -> Scroll and select 'System' -> Select 'Developer options' -> Turn off the top switch to disable all options.",
                 "script_code": "adb shell settings put global development_settings_enabled 0"
             },
             {
@@ -51,7 +51,7 @@ def ensure_default_user_and_rules():
                 "description": "Disable Android Debug Bridge (ADB) USB connection.",
                 "rationale": "Active USB debugging allows a physical attacker to run shell commands, bypass locks, and steal user data.",
                 "verification": "Settings -> Developer options -> USB debugging (Ensure OFF)",
-                "remediation": "Go to Developer Options and switch off USB Debugging.",
+                "remediation": "Open Settings -> Scroll and select 'System' -> Select 'Developer options' -> Scroll to 'USB debugging' and turn off the switch.",
                 "script_code": "adb shell settings put global adb_enabled 0"
             },
             {
@@ -62,7 +62,7 @@ def ensure_default_user_and_rules():
                 "description": "Prevent installation of application packages (.apk) outside Google Play.",
                 "rationale": "Sideloading unverified applications increases the risk of malware and ransomware infections.",
                 "verification": "Settings -> Apps -> Special app access -> Install unknown apps",
-                "remediation": "Revoke the 'Install Unknown Apps' permission for all browser and file manager apps.",
+                "remediation": "Open Settings -> Navigate to 'Apps' -> Tap 'Special app access' -> Tap 'Install unknown apps' -> Turn off permissions for Chrome, Files, and other browsers.",
                 "script_code": "# Manual security verification required - Android Sandbox Restrictions"
             },
             {
@@ -73,7 +73,7 @@ def ensure_default_user_and_rules():
                 "description": "Secure device with a strong PIN, pattern, or password.",
                 "rationale": "A device without a screen lock allows physical access to personal files, banking apps, and system settings.",
                 "verification": "Settings -> Security -> Screen Lock (Ensure PIN/Password/Biometrics active)",
-                "remediation": "Set a screen lock type to PIN (minimum 6 digits) or a complex Password.",
+                "remediation": "Open Settings -> Navigate to 'Security' -> Tap 'Screen lock' -> Select 'PIN' (minimum 6 digits) or 'Password' to secure the device.",
                 "script_code": "# Configured in System Settings"
             },
             {
@@ -84,7 +84,7 @@ def ensure_default_user_and_rules():
                 "description": "Ensure all user data partition blocks are encrypted at rest.",
                 "rationale": "Unencrypted storage allows attackers to pull files directly from memory chips by physically accessing the board.",
                 "verification": "Settings -> Security -> Encryption & credentials (Ensure status is Encrypted)",
-                "remediation": "Modern Android devices (10+) are encrypted by default. Ensure secure startup is active.",
+                "remediation": "Open Settings -> Navigate to 'Security' -> Click 'Encryption & credentials'. Ensure status shows 'Encrypted'. (Android 10+ devices enforce this by default).",
                 "script_code": "adb shell getprop ro.crypto.state"
             },
             {
@@ -95,7 +95,7 @@ def ensure_default_user_and_rules():
                 "description": "Keep Google's built-in app scanner active to identify malicious files.",
                 "rationale": "Play Protect scans installed apps for known virus signatures and suspicious background behavior.",
                 "verification": "Play Store -> Profile -> Play Protect -> Settings (Ensure Turn on scan active)",
-                "remediation": "Open Play Store, click Profile Icon, navigate to Play Protect, and click Turn On.",
+                "remediation": "Open Google Play Store -> Tap your profile icon -> Select 'Play Protect' -> Tap Settings (gear icon) -> Enable 'Scan apps with Play Protect'.",
                 "script_code": "# Configured in Google Play Store Settings"
             },
             {
@@ -106,7 +106,7 @@ def ensure_default_user_and_rules():
                 "description": "Allow remote location tracking, lock, and wipe options.",
                 "rationale": "If your device is lost or stolen, Find My Device lets you erase sensitive details remotely.",
                 "verification": "Settings -> Security -> Find My Device (Ensure ON)",
-                "remediation": "Enable 'Find My Device' toggle under Security settings.",
+                "remediation": "Open Settings -> Navigate to 'Security' -> Tap 'Find My Device' -> Turn toggle switch to ON.",
                 "script_code": "# Configured in System Settings"
             },
             {
@@ -117,7 +117,7 @@ def ensure_default_user_and_rules():
                 "description": "Hide your device from bluetooth scans of surrounding hosts.",
                 "rationale": "Continuous discovery invites remote bluetooth exploits (e.g. BlueBorne) and location tracking.",
                 "verification": "Settings -> Connected devices -> Connection preferences -> Bluetooth",
-                "remediation": "Set Bluetooth visible status to Hidden or disable Bluetooth when not in use.",
+                "remediation": "Open Settings -> Tap 'Connected devices' -> Tap 'Connection preferences' -> Select 'Bluetooth' -> Toggle bluetooth discoverable state to OFF.",
                 "script_code": "adb shell cmd bluetooth disable"
             },
             {
@@ -128,7 +128,7 @@ def ensure_default_user_and_rules():
                 "description": "Limit GPS tracking to active navigation/mapping applications only.",
                 "rationale": "Rogue applications track user movements in the background for advertising or surveillance.",
                 "verification": "Settings -> Privacy -> Permission manager -> Location",
-                "remediation": "Change location permissions for non-essential apps to 'Only while using the app' or 'Don't allow'.",
+                "remediation": "Open Settings -> Navigate to 'Privacy' -> Tap 'Permission manager' -> Select 'Location' -> Change background tracking permissions to 'Only while using the app' or 'Don't allow'.",
                 "script_code": "# Configured in System Permission Manager"
             }
         ]
