@@ -32,14 +32,7 @@ def seed_db():
     rules = HardeningRule.objects.all()
     print(f"[+] Total HardeningRule rows in database: {rules.count()}")
     
-    # Initialize UserProgress entries for each rule
-    progress_count = 0
-    for rule in rules:
-        _, created = UserProgress.objects.get_or_create(rule=rule)
-        if created:
-            progress_count += 1
-            
-    print(f"[+] UserProgress tracking records active: {UserProgress.objects.count()} ({progress_count} newly initialized).")
+    print("[+] Database seeding complete. UserProgress will be initialized dynamically on client logins.")
 
 if __name__ == '__main__':
     seed_db()

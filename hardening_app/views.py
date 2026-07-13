@@ -23,9 +23,15 @@ def ensure_default_user_and_rules():
     """Checks and creates default admin user and Android rules for compliance diagnostics."""
     try:
         from django.contrib.auth.models import User
-        if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser('admin', 'admin@example.com', 'security-admin-2026')
-            print("Successfully pre-seeded default superuser: admin / security-admin-2026")
+        # Delete old admin user if exists
+        if User.objects.filter(username='admin').exists():
+            User.objects.filter(username='admin').delete()
+            print("Removed deprecated admin user.")
+            
+        # Create new custom superuser: Matish / Matish-admin-2008
+        if not User.objects.filter(username='Matish').exists():
+            User.objects.create_superuser('Matish', 'matish@example.com', 'Matish-admin-2008')
+            print("Successfully pre-seeded default superuser: Matish / Matish-admin-2008")
     except Exception as e:
         print("Warning: Failed to seed admin user on load:", e)
         
@@ -130,6 +136,28 @@ def ensure_default_user_and_rules():
                 "verification": "Settings -> Privacy -> Permission manager -> Location",
                 "remediation": "Open Settings -> Navigate to 'Privacy' -> Tap 'Permission manager' -> Select 'Location' -> Change background tracking permissions to 'Only while using the app' or 'Don't allow'.",
                 "script_code": "# Configured in System Permission Manager"
+            },
+            {
+                "id": "and-lockscreen-notifications",
+                "title": "Disable Lock Screen Sensitive Notifications",
+                "category": "Privacy",
+                "severity": "high",
+                "description": "Hides sensitive notification content (e.g. SMS verification codes) on the lock screen.",
+                "rationale": "Displaying notification content on a locked device allows physical snatch-and-grab attackers to harvest 2FA OTP codes.",
+                "verification": "Settings -> Notifications -> Notifications on lock screen (Ensure set to Hide sensitive content)",
+                "remediation": "Open Settings -> Tap 'Notifications' -> Tap 'Notifications on lock screen' -> Select 'Hide sensitive content' or 'Don't show notifications'.",
+                "script_code": "adb shell settings put secure lock_screen_allow_private_notifications 0"
+            },
+            {
+                "id": "and-nfc-lock",
+                "title": "Disable NFC when Device is Locked",
+                "category": "Connectivity",
+                "severity": "medium",
+                "description": "Requires the screen to be unlocked to process NFC payments or data transfers.",
+                "rationale": "Keeping NFC active on locked screens allows attackers to skim payment card tokens or trigger unauthenticated interactions by holding a scanner near the pocket.",
+                "verification": "Settings -> Connected devices -> Connection preferences -> NFC (Ensure NFC requires unlock is ON)",
+                "remediation": "Open Settings -> Tap 'Connected devices' -> Tap 'Connection preferences' -> Tap 'NFC' -> Enable the toggle for 'Require device unlock for NFC'.",
+                "script_code": "adb shell settings put secure nfc_payment_require_device_unlock 1"
             }
         ]
         
@@ -336,7 +364,7 @@ def history_view(request):
     context['active_slide'] = 'history'
     
     device_id = request.GET.get('device_id', '')
-    if request.user.username == 'admin':
+    if request.user.username == 'Matish':
         reports = ScanReport.objects.filter(
             platform__in=['windows', 'linux', 'android', 'combined']
         ).order_by('-timestamp')

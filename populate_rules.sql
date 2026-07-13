@@ -89,6 +89,28 @@ try {
     Write-Host "[+] Auditing for Logon Failures enabled successfully." -ForegroundColor Green
 } catch {
     Write-Warning "Failed to enable logon failure auditing: $_"
+}'),
+
+('win-autorun', 'windows', 'Disable AutoPlay / AutoRun for all drives', 'System', 'medium', 'Disables AutoPlay features on all drives to block automatic malware launch from USB/removable drives.', 'Removable USB media can host malicious autorun scripts. Disabling NoDriveTypeAutoRun blocks programs from launching automatically when USB media is connected.', 'Get-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'' -Name ''NoDriveTypeAutoRun''', 'Open Registry Editor. Navigate to HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer. Create a DWORD named "NoDriveTypeAutoRun" and set its value to 255 (decimal).', '# Rule: Disable AutoRun/AutoPlay for all drives
+Write-Host "[-] Disabling AutoPlay for all drives..." -ForegroundColor Gray
+try {
+    $regPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+    if (-not (Test-Path $regPath)) {
+        New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies" -Name "Explorer" -Force | Out-Null
+    }
+    Set-ItemProperty -Path $regPath -Name "NoDriveTypeAutoRun" -Value 255 -Force -ErrorAction Stop
+    Write-Host "[+] AutoPlay disabled for all drive types." -ForegroundColor Green
+} catch {
+    Write-Warning "Failed to disable AutoPlay: $_"
+}'),
+
+('win-restrict-local-network', 'windows', 'Restrict Local Accounts Network Access', 'Accounts', 'high', 'Prevents unprivileged local accounts from being utilized for remote network operations.', 'Restricting blank password network operations prevents lateral movement in network environments by restricting local credentials to console logs only.', 'Get-ItemProperty -Path ''HKLM:\SYSTEM\CurrentControlSet\Control\Lsa'' -Name ''LimitBlankPasswordUse''', 'Search for "Local Security Policy". Expand Local Policies -> Security Options. Double-click "Accounts: Limit local account use of blank passwords to console logon only", and select Enabled.', '# Rule: Limit Blank Password Remote Use
+Write-Host "[-] Restricting blank password network usage..." -ForegroundColor Gray
+try {
+    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LimitBlankPasswordUse" -Value 1 -Force -ErrorAction Stop
+    Write-Host "[+] Local accounts network blank password usage restricted." -ForegroundColor Green
+} catch {
+    Write-Warning "Failed to restrict network accounts: $_"
 }');
 
 -- Linux Rules
@@ -193,4 +215,16 @@ if command -v apt-get &> /dev/null; then
     echo "[+] auditd system auditing is active."
 else
     echo "[!] apt-get not found. Skipping auditd installation."
-fi');
+fi'),
+
+('lin-disable-usb-storage', 'linux', 'Disable USB Storage Kernel Driver', 'System', 'high', 'Blocks loading of the usb-storage driver to prevent unauthorized USB device access.', 'Disabling loading of usb-storage module prevents attackers from plugging in hardware keys or external devices to extract directory tables.', 'cat /etc/modprobe.d/blacklist-usb.conf', 'Open terminal. Run: echo "blacklist usb-storage" | sudo tee /etc/modprobe.d/blacklist-usb.conf', '# Rule: Blacklist USB Storage Kernel Module
+echo "[-] Blacklisting usb-storage driver module..."
+echo "blacklist usb-storage" > /etc/modprobe.d/blacklist-usb.conf
+echo "[+] USB storage blacklisted."'),
+
+('lin-dmesg-restrict', 'linux', 'Restrict Kernel Log Access (dmesg)', 'System', 'medium', 'Enforces dmesg_restrict to allow only administrators to view kernel logs.', 'Restricting dmesg log access blocks unprivileged local users from reading kernel addresses that facilitate local privilege exploits.', 'sysctl kernel.dmesg_restrict', 'Open terminal. Append "kernel.dmesg_restrict = 1" to /etc/sysctl.conf and run: sudo sysctl -p', '# Rule: Restrict dmesg log access
+echo "[-] Securing kernel logging access..."
+backup_file "/etc/sysctl.conf"
+echo "kernel.dmesg_restrict = 1" >> /etc/sysctl.conf
+sysctl -p &> /dev/null
+echo "[+] kernel dmesg access restricted."');
