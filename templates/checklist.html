@@ -25,6 +25,13 @@
         </svg>
         Linux
       </button>
+      <button class="platform-btn" data-platform="android">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+          <path d="M7 11h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/>
+          <path d="M12 2a10 10 0 0 0-7.8 16.2c.3.4.7.7 1.1 1a10.4 10.4 0 0 0 13.4 0c.4-.3.8-.6 1.1-1A10 10 0 0 0 12 2zm1 3.5c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm-2 0c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm1 6.5c-1.3 0-2.5-.5-3-1-.2-.2-.2-.5 0-.7a.5.5 0 0 1 .7 0c.4.4 1.3.7 2.3.7s1.9-.3 2.3-.7a.5.5 0 0 1 .7.7c-.5.5-1.7 1-3 1z"/>
+        </svg>
+        Android
+      </button>
     </div>
   </div>
 </header>
@@ -110,6 +117,23 @@
     ],
     "linux": [
       {% for rule in linux_rules %}
+        {
+          "id": "{{ rule.id }}",
+          "title": "{{ rule.title|escapejs }}",
+          "category": "{{ rule.category|escapejs }}",
+          "severity": "{{ rule.severity }}",
+          "description": "{{ rule.description|escapejs }}",
+          "rationale": "{{ rule.rationale|escapejs }}",
+          "verification": "{{ rule.verification|escapejs }}",
+          "remediation": "{{ rule.remediation|escapejs }}",
+          "scriptCode": "{{ rule.script_code|escapejs }}",
+          "isCompleted": {% if rule.progress.is_completed %}true{% else %}false{% endif %},
+          "isIncluded": {% if rule.progress.is_included_in_script %}true{% else %}false{% endif %}
+        }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "android": [
+      {% for rule in android_rules %}
         {
           "id": "{{ rule.id }}",
           "title": "{{ rule.title|escapejs }}",

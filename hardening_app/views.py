@@ -18,9 +18,9 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-# --- Database User Seeding helper ---
-def ensure_default_user():
-    """Checks and creates default admin user for initial testing."""
+# --- Database User & Android Rules Seeding Helper ---
+def ensure_default_user_and_rules():
+    """Checks and creates default admin user and Android rules for compliance diagnostics."""
     try:
         from django.contrib.auth.models import User
         if not User.objects.filter(username='admin').exists():
@@ -28,13 +28,137 @@ def ensure_default_user():
             print("Successfully pre-seeded default superuser: admin / security-admin-2026")
     except Exception as e:
         print("Warning: Failed to seed admin user on load:", e)
+        
+    try:
+        # Seed Android platform rules if not already present
+        android_data = [
+            {
+                "id": "and-dev-options",
+                "title": "Disable Developer Options",
+                "category": "System Security",
+                "severity": "medium",
+                "description": "Disable developer options to prevent unauthorized device access.",
+                "rationale": "Developer options allow advanced configurations like USB debugging which bypass system security locks.",
+                "verification": "Settings -> System -> Developer options (Ensure toggle is OFF)",
+                "remediation": "Toggle 'Developer Options' to OFF in system settings.",
+                "script_code": "adb shell settings put global development_settings_enabled 0"
+            },
+            {
+                "id": "and-usb-debugging",
+                "title": "Disable USB Debugging",
+                "category": "Connectivity",
+                "severity": "high",
+                "description": "Disable Android Debug Bridge (ADB) USB connection.",
+                "rationale": "Active USB debugging allows a physical attacker to run shell commands, bypass locks, and steal user data.",
+                "verification": "Settings -> Developer options -> USB debugging (Ensure OFF)",
+                "remediation": "Go to Developer Options and switch off USB Debugging.",
+                "script_code": "adb shell settings put global adb_enabled 0"
+            },
+            {
+                "id": "and-unknown-sources",
+                "title": "Disable Unknown Sources",
+                "category": "App Security",
+                "severity": "critical",
+                "description": "Prevent installation of application packages (.apk) outside Google Play.",
+                "rationale": "Sideloading unverified applications increases the risk of malware and ransomware infections.",
+                "verification": "Settings -> Apps -> Special app access -> Install unknown apps",
+                "remediation": "Revoke the 'Install Unknown Apps' permission for all browser and file manager apps.",
+                "script_code": "# Manual security verification required - Android Sandbox Restrictions"
+            },
+            {
+                "id": "and-screen-lock",
+                "title": "Enforce Screen Lock PIN/Password",
+                "category": "Authentication",
+                "severity": "critical",
+                "description": "Secure device with a strong PIN, pattern, or password.",
+                "rationale": "A device without a screen lock allows physical access to personal files, banking apps, and system settings.",
+                "verification": "Settings -> Security -> Screen Lock (Ensure PIN/Password/Biometrics active)",
+                "remediation": "Set a screen lock type to PIN (minimum 6 digits) or a complex Password.",
+                "script_code": "# Configured in System Settings"
+            },
+            {
+                "id": "and-storage-encryption",
+                "title": "Verify Storage Encryption",
+                "category": "Data Protection",
+                "severity": "high",
+                "description": "Ensure all user data partition blocks are encrypted at rest.",
+                "rationale": "Unencrypted storage allows attackers to pull files directly from memory chips by physically accessing the board.",
+                "verification": "Settings -> Security -> Encryption & credentials (Ensure status is Encrypted)",
+                "remediation": "Modern Android devices (10+) are encrypted by default. Ensure secure startup is active.",
+                "script_code": "adb shell getprop ro.crypto.state"
+            },
+            {
+                "id": "and-play-protect",
+                "title": "Enable Google Play Protect",
+                "category": "App Security",
+                "severity": "critical",
+                "description": "Keep Google's built-in app scanner active to identify malicious files.",
+                "rationale": "Play Protect scans installed apps for known virus signatures and suspicious background behavior.",
+                "verification": "Play Store -> Profile -> Play Protect -> Settings (Ensure Turn on scan active)",
+                "remediation": "Open Play Store, click Profile Icon, navigate to Play Protect, and click Turn On.",
+                "script_code": "# Configured in Google Play Store Settings"
+            },
+            {
+                "id": "and-find-device",
+                "title": "Enable Find My Device",
+                "category": "Data Protection",
+                "severity": "medium",
+                "description": "Allow remote location tracking, lock, and wipe options.",
+                "rationale": "If your device is lost or stolen, Find My Device lets you erase sensitive details remotely.",
+                "verification": "Settings -> Security -> Find My Device (Ensure ON)",
+                "remediation": "Enable 'Find My Device' toggle under Security settings.",
+                "script_code": "# Configured in System Settings"
+            },
+            {
+                "id": "and-bluetooth-discovery",
+                "title": "Disable Bluetooth Discoverable Mode",
+                "category": "Connectivity",
+                "severity": "medium",
+                "description": "Hide your device from bluetooth scans of surrounding hosts.",
+                "rationale": "Continuous discovery invites remote bluetooth exploits (e.g. BlueBorne) and location tracking.",
+                "verification": "Settings -> Connected devices -> Connection preferences -> Bluetooth",
+                "remediation": "Set Bluetooth visible status to Hidden or disable Bluetooth when not in use.",
+                "script_code": "adb shell cmd bluetooth disable"
+            },
+            {
+                "id": "and-location-services",
+                "title": "Restrict App Location Permissions",
+                "category": "Privacy",
+                "severity": "high",
+                "description": "Limit GPS tracking to active navigation/mapping applications only.",
+                "rationale": "Rogue applications track user movements in the background for advertising or surveillance.",
+                "verification": "Settings -> Privacy -> Permission manager -> Location",
+                "remediation": "Change location permissions for non-essential apps to 'Only while using the app' or 'Don't allow'.",
+                "script_code": "# Configured in System Permission Manager"
+            }
+        ]
+        
+        for rule in android_data:
+            rule_obj, created = HardeningRule.objects.get_or_create(
+                id=rule["id"],
+                defaults={
+                    "title": rule["title"],
+                    "platform": "android",
+                    "category": rule["category"],
+                    "severity": rule["severity"],
+                    "description": rule["description"],
+                    "rationale": rule["rationale"],
+                    "verification": rule["verification"],
+                    "remediation": rule["remediation"],
+                    "script_code": rule["script_code"]
+                }
+            )
+            UserProgress.objects.get_or_create(rule=rule_obj)
+            
+    except Exception as e:
+        print("Warning: Failed to seed Android rules on load:", e)
 
 
 # --- Authentication Views ---
 
 def login_view(request):
     """Secure login endpoint authenticating username & password credentials."""
-    ensure_default_user()
+    ensure_default_user_and_rules()
     
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -64,11 +188,12 @@ def logout_view(request):
 # --- Context Helpers ---
 
 def get_base_context():
-    """Helper to return consistent layout variables across all dashboard slides."""
+    """Helper to return consistent layout variables across all dashboard slides, including Android."""
     rules = HardeningRule.objects.select_related('progress').all()
     
     windows_rules = [r for r in rules if r.platform == 'windows']
     linux_rules = [r for r in rules if r.platform == 'linux']
+    android_rules = [r for r in rules if r.platform == 'android']
     
     win_total = len(windows_rules)
     win_completed = sum(1 for r in windows_rules if r.progress.is_completed)
@@ -80,12 +205,29 @@ def get_base_context():
     lin_pending = lin_total - lin_completed
     lin_pct = int((lin_completed / lin_total) * 100) if lin_total > 0 else 0
     
+    and_total = len(android_rules)
+    and_completed = sum(1 for r in android_rules if r.progress.is_completed)
+    and_pending = and_total - and_completed
+    and_pct = int((and_completed / and_total) * 100) if and_total > 0 else 0
+    
     win_categories = sorted(list(set(r.category for r in windows_rules)))
     lin_categories = sorted(list(set(r.category for r in linux_rules)))
+    and_categories = sorted(list(set(r.category for r in android_rules)))
+    
+    # Identify currently failed rules for Windows, Linux, and Android to render the Remediation accordion guide
+    win_failed = [r for r in windows_rules if not r.progress.is_completed]
+    lin_failed = [r for r in linux_rules if not r.progress.is_completed]
+    and_failed = [r for r in android_rules if not r.progress.is_completed]
     
     return {
         'windows_rules': windows_rules,
         'linux_rules': linux_rules,
+        'android_rules': android_rules,
+        'failed_rules': {
+            'windows': win_failed,
+            'linux': lin_failed,
+            'android': and_failed,
+        },
         'stats': {
             'windows': {
                 'total': win_total,
@@ -100,6 +242,13 @@ def get_base_context():
                 'pending': lin_pending,
                 'percentage': lin_pct,
                 'categories': lin_categories
+            },
+            'android': {
+                'total': and_total,
+                'completed': and_completed,
+                'pending': and_pending,
+                'percentage': and_pct,
+                'categories': and_categories
             }
         }
     }
@@ -134,8 +283,7 @@ def history_view(request):
     context = get_base_context()
     context['active_slide'] = 'history'
     
-    # Query database scan report logs
-    reports = ScanReport.objects.filter(platform__in=['windows', 'linux', 'combined']).order_by('-timestamp')
+    reports = ScanReport.objects.filter(platform__in=['windows', 'linux', 'android', 'combined']).order_by('-timestamp')
     context['reports'] = reports
     return render(request, 'history.html', context)
 
@@ -232,7 +380,7 @@ def api_bulk_actions(request):
 
 @login_required
 def download_script(request, platform):
-    if platform not in ['windows', 'linux']:
+    if platform not in ['windows', 'linux', 'android']:
         return HttpResponse("Invalid platform", status=400)
         
     rules = HardeningRule.objects.filter(platform=platform, progress__is_included_in_script=True)
@@ -277,7 +425,7 @@ Write-Host "==========================================" -ForegroundColor Cyan
         response['Content-Disposition'] = f'attachment; filename="win-hardening.ps1"'
         return response
         
-    else: # Linux
+    elif platform == 'linux':
         script_text += f'''#!/bin/bash
 # ==============================================================================
 # Custom OS Hardening Script generated by OS Hardening Assistant
@@ -317,6 +465,47 @@ echo "=========================================="
 '''
         response = HttpResponse(script_text, content_type='application/x-sh')
         response['Content-Disposition'] = f'attachment; filename="linux-hardening.sh"'
+        return response
+        
+    else: # Android ADB commands
+        script_text += f'''#!/bin/bash
+# ==============================================================================
+# Custom Android ADB Hardening Script generated by OS Hardening Assistant
+# Platform: Android (Audited via ADB Commands)
+# Generated on: {date_str}
+# ==============================================================================
+
+echo "=========================================="
+echo " Starting Android ADB Hardening Controls  "
+echo " Ensure USB Debugging is active on phone  "
+echo "=========================================="
+
+# Helper function to check adb connection
+check_adb() {{
+    adb devices | grep -w "device" > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "Error: No Android device authorized via ADB. Please connect and verify permissions."
+        exit 1
+    fi
+}}
+
+check_adb
+'''
+        if not rules.exists():
+            script_text += "\n# No hardening ADB scripts selected to run.\n"
+        else:
+            for rule in rules:
+                if not rule.script_code.startswith("#"):
+                    script_text += f"\necho 'Executing: {rule.title}'\n{rule.script_code}\n"
+                else:
+                    script_text += f"\n# {rule.title} - {rule.remediation}\n"
+                    
+        script_text += f'''\necho "=========================================="
+echo " Android Hardening settings applied!      "
+echo "=========================================="
+'''
+        response = HttpResponse(script_text, content_type='application/x-sh')
+        response['Content-Disposition'] = f'attachment; filename="android-hardening.sh"'
         return response
 
 
@@ -397,11 +586,11 @@ def execute_windows_audits():
 @login_required
 @require_POST
 def api_scan_system(request):
-    """Scans Windows or Linux system separately depending on request parameter."""
+    """Scans Windows, Linux or Android mobile systems separately (using simulated or web APIs)."""
     try:
         data = json.loads(request.body)
         platform_name = data.get('platform', 'windows')
-        if platform_name not in ['windows', 'linux']:
+        if platform_name not in ['windows', 'linux', 'android']:
             return JsonResponse({'success': False, 'error': 'Invalid platform'}, status=400)
             
         # Load rules and current state (BEFORE state)
@@ -422,6 +611,9 @@ def api_scan_system(request):
                 passed_ids = execute_windows_audits()
             else:
                 passed_ids = [rules[i].id for i in range(total) if i % 2 == 0]
+        elif platform_name == 'android':
+            # Perform browser location API diagnostic or simulate mobile checks (e.g. 5 out of 9 pass)
+            passed_ids = [rules[i].id for i in range(total) if i % 2 == 0]
         else: # linux
             passed_ids = [rules[i].id for i in range(total) if i % 2 == 0]
             
@@ -509,7 +701,7 @@ def download_repository_zip(request):
 @login_required
 def download_pdf_report(request, platform):
     """Compiles rules and progress data separately for the selected platform, generating PDF download."""
-    if platform not in ['windows', 'linux']:
+    if platform not in ['windows', 'linux', 'android']:
         return HttpResponse("Invalid platform", status=400)
         
     try:
@@ -601,7 +793,7 @@ def download_pdf_report(request, platform):
         elements_list = []
         
         # 1. Title & Header (separate platform labels)
-        platform_label = "Windows OS" if platform == 'windows' else "Linux OS"
+        platform_label = "Windows OS" if platform == 'windows' else ("Linux OS" if platform == 'linux' else "Android OS")
         elements_list.append(Paragraph(f"{platform_label} Hardening Compliance Report", title_style))
         elements_list.append(Paragraph(f"Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')} UTC | Platform: {platform_label.upper()} Audit", subtitle_style))
         elements_list.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#e5e7eb'), spaceAfter=15))
