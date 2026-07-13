@@ -24,15 +24,16 @@ def ensure_default_user_and_rules():
     try:
         from django.contrib.auth.models import User
         # Delete old admin and Matish users if they exist
-        if User.objects.filter(username='admin').exists():
-            User.objects.filter(username='admin').delete()
-        if User.objects.filter(username='Matish').exists():
-            User.objects.filter(username='Matish').delete()
+        User.objects.filter(username='admin').delete()
+        User.objects.filter(username='Matish').delete()
             
-        # Create new custom superuser: matish0508 / matish-admin-200805
-        if not User.objects.filter(username='matish0508').exists():
-            User.objects.create_superuser('matish0508', 'matish0508@example.com', 'matish-admin-200805')
-            print("Successfully pre-seeded default superuser: matish0508 / matish-admin-200805")
+        # Forceupsert the custom superuser: matish0508 / matish-admin-200805
+        user, created = User.objects.get_or_create(username='matish0508', defaults={'email': 'matish0508@example.com'})
+        user.set_password('matish-admin-200805')
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
+        print("Successfully seeded/reset superuser: matish0508 / matish-admin-200805")
     except Exception as e:
         print("Warning: Failed to seed admin user on load:", e)
         
