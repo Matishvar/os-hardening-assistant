@@ -23,15 +23,16 @@ def ensure_default_user_and_rules():
     """Checks and creates default admin user and Android rules for compliance diagnostics."""
     try:
         from django.contrib.auth.models import User
-        # Delete old admin user if exists
+        # Delete old admin and Matish users if they exist
         if User.objects.filter(username='admin').exists():
             User.objects.filter(username='admin').delete()
-            print("Removed deprecated admin user.")
+        if User.objects.filter(username='Matish').exists():
+            User.objects.filter(username='Matish').delete()
             
-        # Create new custom superuser: Matish / Matish-admin-2008
-        if not User.objects.filter(username='Matish').exists():
-            User.objects.create_superuser('Matish', 'matish@example.com', 'Matish-admin-2008')
-            print("Successfully pre-seeded default superuser: Matish / Matish-admin-2008")
+        # Create new custom superuser: matish0508 / matish-admin-200805
+        if not User.objects.filter(username='matish0508').exists():
+            User.objects.create_superuser('matish0508', 'matish0508@example.com', 'matish-admin-200805')
+            print("Successfully pre-seeded default superuser: matish0508 / matish-admin-200805")
     except Exception as e:
         print("Warning: Failed to seed admin user on load:", e)
         
@@ -364,7 +365,7 @@ def history_view(request):
     context['active_slide'] = 'history'
     
     device_id = request.GET.get('device_id', '')
-    if request.user.username == 'Matish':
+    if request.user.username == 'matish0508':
         reports = ScanReport.objects.filter(
             platform__in=['windows', 'linux', 'android', 'combined']
         ).order_by('-timestamp')
