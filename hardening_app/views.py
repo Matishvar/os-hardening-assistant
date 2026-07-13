@@ -29,6 +29,23 @@ def ensure_default_user_and_rules():
         print("Warning: Migration check on load failed:", e)
 
     try:
+        # Seed Windows and Linux platform rules from populate_rules.sql if exists
+        import os
+        from django.db import connection
+        sql_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'populate_rules.sql')
+        if os.path.exists(sql_file_path):
+            with open(sql_file_path, 'r', encoding='utf-8') as f:
+                sql_script = f.read()
+            connection.ensure_connection()
+            raw_conn = connection.connection
+            cursor = raw_conn.cursor()
+            cursor.executescript(sql_script)
+            raw_conn.commit()
+            print("Successfully loaded Windows/Linux hardening rules from SQL file.")
+    except Exception as e:
+        print("Warning: Failed to seed SQL hardening rules:", e)
+
+    try:
         from django.contrib.auth.models import User
         # Delete old admin and Matish users if they exist
         User.objects.filter(username='admin').delete()
