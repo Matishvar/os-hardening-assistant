@@ -561,9 +561,10 @@ def execute_windows_audits():
     if out == "0" and code == 0:
         completed.append("win-disable-llmnr")
         
-    # 6. Disable SMBv1
-    out, code = run_powershell_check("(Get-SmbServerConfiguration).EnableSMB1Protocol")
-    if out == "False" and code == 0:
+    # 6. Disable SMBv1 & Enforce SMBv3 Security
+    out_v1, code_v1 = run_powershell_check("(Get-SmbServerConfiguration).EnableSMB1Protocol")
+    out_enc, code_enc = run_powershell_check("(Get-SmbServerConfiguration).EncryptData")
+    if out_v1 == "False" and out_enc == "True" and code_v1 == 0 and code_enc == 0:
         completed.append("win-smbv1")
         
     # 7. Set UAC Consent Prompt Behavior to 2 (Always Notify)

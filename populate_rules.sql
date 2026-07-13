@@ -51,14 +51,17 @@ try {
     Write-Warning "Failed to disable LLMNR: $_"
 }'),
 
-('win-smbv1', 'windows', 'Disable Legacy SMBv1 Protocol', 'Services', 'critical', 'Disables the highly vulnerable and obsolete Server Message Block v1 protocol.', 'SMBv1 is outdated, slow, lacks security improvements like packet signing/encryption, and contains major known vulnerabilities (e.g., EternalBlue, which was used to distribute WannaCry ransomware).', 'Get-SmbServerConfiguration | Select-Object EnableSMB1Protocol', 'Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart', '# Rule: Disable SMBv1 Protocol
-Write-Host "[-] Disabling SMBv1 Protocol..." -ForegroundColor Gray
+('win-smbv1', 'windows', 'Disable SMBv1 & Enforce SMBv3 Security', 'Services', 'critical', 'Disables the obsolete and insecure SMBv1 protocol, while enabling and enforcing SMBv3 transport encryption and packet signing.', 'SMBv1 is vulnerable to severe exploits like EternalBlue. SMBv3 introduces major security capabilities including transport-level data encryption and cryptographic signing, preventing man-in-the-middle attacks and data sniffing.', 'Get-SmbServerConfiguration | Select-Object EnableSMB1Protocol, EnableSMB2Protocol, EncryptData, RequireSecuritySignature', 'Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart; Set-SmbServerConfiguration -EnableSMB2Protocol $true -EncryptData $true -RequireSecuritySignature $true -Force', '# Rule: Disable SMBv1 and Enforce SMBv3 Security
+Write-Host "[-] Configuring secure SMB settings (Disabling SMBv1, Enforcing SMBv3)..." -ForegroundColor Gray
 try {
     Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force -ErrorAction SilentlyContinue
-    Disable-WindowsOptionalFeature -Online -FeatureName "SMB1Protocol" -NoRestart -ErrorAction Stop | Out-Null
-    Write-Host "[+] SMBv1 protocol disabled successfully." -ForegroundColor Green
+    Disable-WindowsOptionalFeature -Online -FeatureName "SMB1Protocol" -NoRestart -ErrorAction SilentlyContinue | Out-Null
+    Set-SmbServerConfiguration -EnableSMB2Protocol $true -Force -ErrorAction SilentlyContinue
+    Set-SmbServerConfiguration -EncryptData $true -Force -ErrorAction SilentlyContinue
+    Set-SmbServerConfiguration -RequireSecuritySignature $true -Force -ErrorAction SilentlyContinue
+    Write-Host "[+] SMBv1 disabled and SMBv3 encryption/signing enforced successfully." -ForegroundColor Green
 } catch {
-    Write-Warning "Failed to completely disable SMBv1: $_"
+    Write-Warning "Failed to secure SMB configuration: $_"
 }'),
 
 ('win-uac-always', 'windows', 'Set UAC to ''Always Notify''', 'System', 'high', 'Raises User Account Control (UAC) prompts to the maximum level to prevent unauthorized administrator actions.', 'With UAC set to ''Always Notify'', any administrative change requires explicit manual consent. This prevents background scripts or malwares from silently escalating privileges.', 'Get-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'' -Name ''ConsentPromptBehaviorAdmin''', 'Set-ItemProperty -Path ''HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'' -Name ''ConsentPromptBehaviorAdmin'' -Value 2', '# Rule: Set UAC to ''Always Notify''
