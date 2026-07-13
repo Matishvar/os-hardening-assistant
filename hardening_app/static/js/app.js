@@ -712,10 +712,17 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
+function getActiveUsername() {
+  const lbl = document.querySelector(".username-lbl");
+  return lbl ? lbl.textContent.trim().toLowerCase() : "anonymous";
+}
+
 function saveScanToHistory(platform, score, timestamp) {
   let history = [];
+  const username = getActiveUsername();
+  const storageKey = `assistant_scan_history_${username}`;
   try {
-    history = JSON.parse(localStorage.getItem("assistant_scan_history") || "[]");
+    history = JSON.parse(localStorage.getItem(storageKey) || "[]");
   } catch (e) {
     console.error("Failed to parse scan history", e);
   }
@@ -730,7 +737,7 @@ function saveScanToHistory(platform, score, timestamp) {
     history = history.slice(0, 50);
   }
   
-  localStorage.setItem("assistant_scan_history", JSON.stringify(history));
+  localStorage.setItem(storageKey, JSON.stringify(history));
 }
 
 function renderHistoryFromLocalStorage() {
@@ -738,8 +745,10 @@ function renderHistoryFromLocalStorage() {
   if (!tbody) return;
   
   let history = [];
+  const username = getActiveUsername();
+  const storageKey = `assistant_scan_history_${username}`;
   try {
-    history = JSON.parse(localStorage.getItem("assistant_scan_history") || "[]");
+    history = JSON.parse(localStorage.getItem(storageKey) || "[]");
   } catch (e) {
     console.error("Failed to read scan history", e);
   }

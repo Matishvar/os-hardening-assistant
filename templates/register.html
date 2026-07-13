@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OS Hardening Assistant - Sign In</title>
+  <title>OS Hardening Assistant - Create Account</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <style>
     .login-container {
@@ -19,7 +19,7 @@
     
     .login-card {
       width: 100%;
-      max-width: 440px;
+      max-width: 460px;
       padding: 3rem;
       border-radius: var(--radius-lg);
       text-align: center;
@@ -156,38 +156,41 @@
       transform: translateY(-1px);
     }
     
-    .default-creds {
+    .pw-requirements {
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid var(--panel-border);
       border-radius: var(--radius-sm);
       padding: 1rem;
-      margin-top: 2rem;
-      font-size: 0.8rem;
+      margin-top: 1.5rem;
+      font-size: 0.78rem;
       color: var(--text-secondary);
       text-align: left;
     }
     
-    .default-creds h4 {
+    .pw-requirements h4 {
       font-weight: 600;
       color: var(--text-primary);
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.5rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
     }
     
-    .default-creds code {
-      font-family: var(--font-mono);
-      background: rgba(0,0,0,0.3);
-      padding: 0.15rem 0.35rem;
-      border-radius: 4px;
-      color: #818cf8;
-      border: 1px solid rgba(255,255,255,0.05);
+    .pw-requirements ul {
+      margin: 0;
+      padding-left: 1.2rem;
+      line-height: 1.5;
+    }
+    
+    .pw-requirements li {
+      margin-bottom: 0.25rem;
     }
   </style>
 </head>
 <body>
-  <!-- Ambient background glow elements -->
   <div class="ambient-glow-1"></div>
   <div class="ambient-glow-2"></div>
 
@@ -196,12 +199,14 @@
       <div class="login-header">
         <div class="login-badge">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <line x1="20" y1="8" x2="20" y2="14"></line>
+            <line x1="23" y1="11" x2="17" y2="11"></line>
           </svg>
         </div>
-        <h2>Sign In</h2>
-        <p>Access OS Hardening Dashboard</p>
+        <h2>Create Account</h2>
+        <p>Register as a new System Auditor</p>
       </div>
 
       {% if error %}
@@ -222,7 +227,7 @@
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <input type="text" id="username" name="username" placeholder="Enter username..." required autofocus autocomplete="username">
+            <input type="text" id="username" name="username" placeholder="Create username..." required autofocus autocomplete="username" value="{{ saved_username|default:'' }}">
           </div>
         </div>
 
@@ -233,21 +238,40 @@
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            <input type="password" id="password" name="password" placeholder="Enter password..." required autocomplete="current-password">
+            <input type="password" id="password" name="password" placeholder="Create strong password..." required autocomplete="new-password">
           </div>
         </div>
 
-        <button type="submit" class="submit-btn">Authorize Session</button>
+        <div class="form-group">
+          <label for="confirm_password">Confirm Password</label>
+          <div class="input-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <input type="password" id="confirm_password" name="confirm_password" placeholder="Re-enter password..." required autocomplete="new-password">
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn">Register Account</button>
       </form>
 
-      <div style="margin-top: 1.5rem; font-size: 0.88rem; color: var(--text-secondary);">
-        Don't have an account? <a href="{% url 'register' %}" style="color: #818cf8; text-decoration: none; font-weight: 600;">Create Account</a>
+      <div class="pw-requirements">
+        <h4>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="color: var(--primary);">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0110 21a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0114 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+          </svg>
+          Password Security Rules
+        </h4>
+        <ul>
+          <li>Must contain a minimum of <b>14 characters</b></li>
+          <li>Must contain at least <b>one uppercase letter</b> (A-Z)</li>
+          <li>Must contain at least <b>one special symbol</b> (e.g. !, @, #, $, %, etc.)</li>
+        </ul>
       </div>
 
-      <div class="default-creds">
-        <h4>🔒 Pre-seeded Test Credentials</h4>
-        Username: <code>admin</code><br>
-        Password: <code>security-admin-2026</code>
+      <div style="margin-top: 1.5rem; font-size: 0.88rem; color: var(--text-secondary);">
+        Already have an account? <a href="{% url 'login' %}" style="color: #818cf8; text-decoration: none; font-weight: 600;">Sign In</a>
       </div>
     </div>
   </div>

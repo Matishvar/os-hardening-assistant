@@ -178,6 +178,45 @@ def login_view(request):
             
     return render(request, 'login.html', {'error': error})
 
+def register_view(request):
+    """Handles new user registration with strict security password complexity policies."""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    error = None
+    saved_username = ""
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        
+        saved_username = username
+        from django.contrib.auth.models import User
+        
+        if not username:
+            error = "Username is required."
+        elif User.objects.filter(username=username).exists():
+            error = "Username is already taken."
+        elif password != confirm_password:
+            error = "Passwords do not match."
+        elif len(password) < 14:
+            error = "Password must contain a minimum of 14 characters."
+        elif not any(c.isupper() for c in password):
+            error = "Password must contain at least one uppercase letter (A-Z)."
+        elif not any(not c.isalnum() for c in password):
+            error = "Password must contain at least one special symbol (e.g. !, @, #, $, %, etc.)."
+        else:
+            try:
+                # Create user
+                user = User.objects.create_user(username=username, password=password)
+                # Auto-login the user after registration
+                login(request, user)
+                return redirect('dashboard')
+            except Exception as e:
+                error = f"Registration failed: {str(e)}"
+                
+    return render(request, 'register.html', {'error': error, 'saved_username': saved_username})
+
 @login_required
 def logout_view(request):
     """Terminates session and redirects to the login screen."""
@@ -187,13 +226,26 @@ def logout_view(request):
 
 # --- Context Helpers ---
 
-def get_base_context():
-    """Helper to return consistent layout variables across all dashboard slides, including Android."""
-    rules = HardeningRule.objects.select_related('progress').all()
+def get_base_context(user):
+    """Helper to return consistent layout variables across all dashboard slides, including Android, isolated by User."""
+    from django.contrib.auth.models import User
+    rules_list = list(HardeningRule.objects.all())
     
-    windows_rules = [r for r in rules if r.platform == 'windows']
-    linux_rules = [r for r in rules if r.platform == 'linux']
-    android_rules = [r for r in rules if r.platform == 'android']
+    # Bulk get or create progress for this user to optimize loading
+    existing_progress_rule_ids = set(UserProgress.objects.filter(user=user).values_list('rule_id', flat=True))
+    missing_rules = [r for r in rules_list if r.id not in existing_progress_rule_ids]
+    if missing_rules:
+        UserProgress.objects.bulk_create([
+            UserProgress(user=user, rule=rule) for rule in missing_rules
+        ])
+        
+    progress_map = {up.rule_id: up for up in UserProgress.objects.filter(user=user)}
+    for rule in rules_list:
+        rule.progress = progress_map.get(rule.id)
+        
+    windows_rules = [r for r in rules_list if r.platform == 'windows']
+    linux_rules = [r for r in rules_list if r.platform == 'linux']
+    android_rules = [r for r in rules_list if r.platform == 'android']
     
     win_total = len(windows_rules)
     win_completed = sum(1 for r in windows_rules if r.progress.is_completed)
@@ -259,35 +311,41 @@ def get_base_context():
 @login_required
 def dashboard_view(request):
     """Protected view displaying Slide 1: System Overview dashboard."""
-    context = get_base_context()
+    context = get_base_context(request.user)
     context['active_slide'] = 'dashboard'
     return render(request, 'dashboard.html', context)
 
 @login_required
 def checklist_view(request):
     """Protected view displaying Slide 2: Interactive security checklist."""
-    context = get_base_context()
+    context = get_base_context(request.user)
     context['active_slide'] = 'checklist'
     return render(request, 'checklist.html', context)
 
 @login_required
 def script_view(request):
     """Protected view displaying Slide 3: Script generator & compiler."""
-    context = get_base_context()
+    context = get_base_context(request.user)
     context['active_slide'] = 'script'
     return render(request, 'script.html', context)
 
 @login_required
 def history_view(request):
     """Protected view displaying Slide 4: Diagnostic scans history table."""
-    context = get_base_context()
+    context = get_base_context(request.user)
     context['active_slide'] = 'history'
     
     device_id = request.GET.get('device_id', '')
-    reports = ScanReport.objects.filter(
-        platform__in=['windows', 'linux', 'android', 'combined'],
-        device_id=device_id
-    ).order_by('-timestamp')
+    if request.user.username == 'admin':
+        reports = ScanReport.objects.filter(
+            platform__in=['windows', 'linux', 'android', 'combined']
+        ).order_by('-timestamp')
+    else:
+        reports = ScanReport.objects.filter(
+            user=request.user,
+            platform__in=['windows', 'linux', 'android', 'combined']
+        ).order_by('-timestamp')
+        
     context['reports'] = reports
     return render(request, 'history.html', context)
 
@@ -301,13 +359,12 @@ def api_toggle_complete(request):
         data = json.loads(request.body)
         rule_id = data.get('rule_id')
         rule = HardeningRule.objects.get(id=rule_id)
-        progress = rule.progress
+        progress = UserProgress.objects.get(user=request.user, rule=rule)
         progress.is_completed = not progress.is_completed
         progress.save()
         
-        platform_rules = HardeningRule.objects.filter(platform=rule.platform).select_related('progress')
-        total = platform_rules.count()
-        completed = sum(1 for r in platform_rules if r.progress.is_completed)
+        total = HardeningRule.objects.filter(platform=rule.platform).count()
+        completed = UserProgress.objects.filter(user=request.user, rule__platform=rule.platform, is_completed=True).count()
         
         return JsonResponse({
             'success': True,
@@ -318,8 +375,8 @@ def api_toggle_complete(request):
                 'percentage': int((completed / total) * 100) if total > 0 else 0
             }
         })
-    except HardeningRule.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Rule not found'}, status=404)
+    except (HardeningRule.DoesNotExist, UserProgress.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Rule progress not found'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
@@ -330,7 +387,7 @@ def api_toggle_include(request):
         data = json.loads(request.body)
         rule_id = data.get('rule_id')
         rule = HardeningRule.objects.get(id=rule_id)
-        progress = rule.progress
+        progress = UserProgress.objects.get(user=request.user, rule=rule)
         progress.is_included_in_script = not progress.is_included_in_script
         progress.save()
         
@@ -338,8 +395,8 @@ def api_toggle_include(request):
             'success': True,
             'is_included': progress.is_included_in_script
         })
-    except HardeningRule.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Rule not found'}, status=404)
+    except (HardeningRule.DoesNotExist, UserProgress.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Rule progress not found'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
@@ -356,7 +413,7 @@ def api_bulk_actions(request):
         if category != 'all':
             rules = rules.filter(category=category)
             
-        progresses = UserProgress.objects.filter(rule__in=rules)
+        progresses = UserProgress.objects.filter(user=request.user, rule__in=rules)
         
         if action == 'check_all':
             progresses.update(is_completed=True)
@@ -367,9 +424,8 @@ def api_bulk_actions(request):
         elif action == 'exclude_all':
             progresses.update(is_included_in_script=False)
             
-        all_platform_rules = HardeningRule.objects.filter(platform=platform).select_related('progress')
-        total = all_platform_rules.count()
-        completed = sum(1 for r in all_platform_rules if r.progress.is_completed)
+        total = HardeningRule.objects.filter(platform=platform).count()
+        completed = UserProgress.objects.filter(user=request.user, rule__platform=platform, is_completed=True).count()
         
         return JsonResponse({
             'success': True,
@@ -387,7 +443,8 @@ def download_script(request, platform):
     if platform not in ['windows', 'linux', 'android']:
         return HttpResponse("Invalid platform", status=400)
         
-    rules = HardeningRule.objects.filter(platform=platform, progress__is_included_in_script=True)
+    included_rule_ids = UserProgress.objects.filter(user=request.user, is_included_in_script=True).values_list('rule_id', flat=True)
+    rules = HardeningRule.objects.filter(platform=platform, id__in=included_rule_ids)
     date_str = timezone.now().strftime('%Y-%m-%d')
     
     script_text = ""
@@ -547,7 +604,7 @@ def execute_windows_audits():
                     if length >= 14:
                         completed.append("win-pw-length")
                 except ValueError:
-                    pass
+                     pass
                 break
                 
     # 3. Enable Defender Real-Time Protection
@@ -600,12 +657,13 @@ def api_scan_system(request):
             return JsonResponse({'success': False, 'error': 'Invalid platform'}, status=400)
             
         # Load rules and current state (BEFORE state)
-        rules = HardeningRule.objects.filter(platform=platform_name).select_related('progress')
+        rules = HardeningRule.objects.filter(platform=platform_name)
         total = rules.count()
         if total == 0:
             return JsonResponse({'success': False, 'error': 'No rules found for platform'}, status=400)
             
-        before_completed = [r.id for r in rules if r.progress.is_completed]
+        progress_map = {up.rule_id: up for up in UserProgress.objects.filter(user=request.user, rule__platform=platform_name)}
+        before_completed = [rid for rid, up in progress_map.items() if up.is_completed]
         before_score = int((len(before_completed) / total) * 100) if total > 0 else 0
         
         passed_ids = []
@@ -618,16 +676,16 @@ def api_scan_system(request):
             else:
                 passed_ids = [rules[i].id for i in range(total) if i % 2 == 0]
         elif platform_name == 'android':
-            # Perform browser location API diagnostic or simulate mobile checks (e.g. 5 out of 9 pass)
             passed_ids = [rules[i].id for i in range(total) if i % 2 == 0]
         else: # linux
             passed_ids = [rules[i].id for i in range(total) if i % 2 == 0]
             
         # Update database states (AFTER state)
         for rule in rules:
-            progress = rule.progress
-            progress.is_completed = (rule.id in passed_ids)
-            progress.save()
+            prog = progress_map.get(rule.id)
+            if prog:
+                prog.is_completed = (rule.id in passed_ids)
+                prog.save()
             
         after_completed = passed_ids
         after_score = int((len(after_completed) / total) * 100) if total > 0 else 0
@@ -640,6 +698,7 @@ def api_scan_system(request):
         
         # Log to ScanReport history database table separately
         new_report = ScanReport.objects.create(
+            user=request.user,
             platform=platform_name,
             score=after_score,
             passed_checks=json.dumps(after_completed),
@@ -647,12 +706,12 @@ def api_scan_system(request):
             device_id=device_id
         )
         
-        # Get the previous scan report for the same platform and device to show baseline comparison
+        # Get the previous scan report for the same platform and user to show baseline comparison
         previous_report = None
         try:
             previous_report = ScanReport.objects.filter(
-                platform=platform_name,
-                device_id=device_id
+                user=request.user,
+                platform=platform_name
             ).exclude(id=new_report.id).latest('timestamp')
         except ScanReport.DoesNotExist:
             pass
@@ -715,16 +774,20 @@ def download_pdf_report(request, platform):
         return HttpResponse("Invalid platform", status=400)
         
     try:
-        # Load rules specifically for the requested platform
-        rules = HardeningRule.objects.filter(platform=platform).select_related('progress').order_by('category')
+        # Load rules specifically for the requested platform and request.user
+        rules = HardeningRule.objects.filter(platform=platform).order_by('category')
+        progress_map = {up.rule_id: up for up in UserProgress.objects.filter(user=request.user, rule__platform=platform)}
+        for rule in rules:
+            rule.progress = progress_map.get(rule.id)
+            
         total = rules.count()
-        completed = sum(1 for r in rules if r.progress.is_completed)
+        completed = sum(1 for r in rules if r.progress and r.progress.is_completed)
         score = int((completed / total) * 100) if total > 0 else 0
         
-        # Fetch the latest scan report specifically for this platform
+        # Fetch the latest scan report specifically for this platform and user
         latest_report = None
         try:
-            latest_report = ScanReport.objects.filter(platform=platform).latest('timestamp')
+            latest_report = ScanReport.objects.filter(user=request.user, platform=platform).latest('timestamp')
         except ScanReport.DoesNotExist:
             pass
             
@@ -837,7 +900,7 @@ def download_pdf_report(request, platform):
         ]
         
         for rule in rules:
-            status_para = Paragraph("COMPLIANT", status_ok) if rule.progress.is_completed else Paragraph("VULNERABLE", status_fail)
+            status_para = Paragraph("COMPLIANT", status_ok) if rule.progress and rule.progress.is_completed else Paragraph("VULNERABLE", status_fail)
             table_data.append([
                 Paragraph(rule.title, body_style),
                 Paragraph(rule.category, body_style),
