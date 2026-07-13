@@ -22,6 +22,13 @@ from reportlab.lib import colors
 def ensure_default_user_and_rules():
     """Checks and creates default admin user and Android rules for compliance diagnostics."""
     try:
+        # Run database migrations dynamically at startup (especially critical for serverless /tmp db copies)
+        from django.core.management import call_command
+        call_command('migrate', interactive=False)
+    except Exception as e:
+        print("Warning: Migration check on load failed:", e)
+
+    try:
         from django.contrib.auth.models import User
         # Delete old admin and Matish users if they exist
         User.objects.filter(username='admin').delete()
