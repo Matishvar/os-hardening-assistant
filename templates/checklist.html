@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<header class="glass-panel" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; flex-wrap: wrap; gap: 1.5rem;">
+  <div class="logo-section">
+    <h2 style="font-size: 1.75rem; font-weight: 700; background: linear-gradient(90deg, #818cf8 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.5rem;">
+      🛡️ Security controls checklist
+    </h2>
+    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">Select and audit critical compliance policies for your environment</p>
+  </div>
+
+  <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+    <div class="platform-tabs" id="platform-tabs">
+      <button class="platform-btn active" data-platform="windows">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+          <path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.1zM10.95 1.95L24 0v11.55H10.95V1.95zM10.95 12.45H24v11.55l-13.05-1.95v-9.6z"/>
+        </svg>
+        Windows
+      </button>
+      <button class="platform-btn" data-platform="linux">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+          <path d="M12 2c-5.52 0-10 4.48-10 10 0 4.75 3.31 8.72 7.75 9.75v-6.88h-2.5v-2.87h2.5v-2.18c0-2.47 1.49-3.83 3.7-3.83 1.06 0 1.97.08 2.24.11v2.59h-1.54c-1.2 0-1.43.57-1.43 1.4v1.83h2.88l-.37 2.87h-2.51v6.9c4.52-.98 7.9-4.97 7.9-9.77 0-5.52-4.48-10-10-10z" style="display:none;"/>
+          <path d="M12 2a10 10 0 0 0-7.8 16.2c.3.4.7.7 1.1 1a10.4 10.4 0 0 0 13.4 0c.4-.3.8-.6 1.1-1A10 10 0 0 0 12 2zm1 3.5c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm-2 0c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm1 6.5c-1.3 0-2.5-.5-3-1-.2-.2-.2-.5 0-.7a.5.5 0 0 1 .7 0c.4.4 1.3.7 2.3.7s1.9-.3 2.3-.7a.5.5 0 0 1 .7.7c-.5.5-1.7 1-3 1z"/>
+        </svg>
+        Linux
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="dashboard-summary" style="margin-bottom: 2rem; display: none;">
+  <!-- Keep hidden elements to prevent app.js DOM binding reference crashes -->
+  <span id="progress-value">0%</span>
+  <span id="completed-value">0</span>
+  <span id="pending-value">0</span>
+  <button id="scan-btn" style="display:none;"></button>
+  <div id="loading-overlay" style="display:none;"></div>
+  <div id="report-modal" style="display:none;">
+    <span id="report-platform-title"></span>
+    <span id="report-timestamp"></span>
+    <span id="report-before-score"></span>
+    <span id="report-after-score"></span>
+    <a href="#" id="download-pdf-btn"></a>
+    <div id="score-shift-bar"></div>
+    <span id="shift-summary"></span>
+    <ul id="report-resolved-list"></ul>
+    <ul id="report-failed-list"></ul>
+    <button id="close-modal-btn"></button>
+  </div>
+</div>
+
+<div class="checklist-pane">
+  <!-- Toolbar & Filter Panels -->
+  <div class="toolbar glass-panel" style="margin-bottom: 1.5rem;">
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input type="text" id="search-input" placeholder="Search hardening controls (e.g., firewall, password)...">
+    </div>
+
+    <div class="filter-group" id="filter-group">
+      <!-- Populated via Javascript -->
+    </div>
+
+    <div class="toolbar-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; width: 100%;">
+      <button class="action-btn" id="toggle-all-checkboxes" title="Toggle check state for all visible rules" style="flex: 1;">
+        Toggle Checks
+      </button>
+      <button class="action-btn" id="toggle-all-script" title="Toggle script inclusion for all visible rules" style="flex: 1;">
+        Toggle Scripts
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive checklist list -->
+  <div class="checklist" id="checklist">
+    <!-- Populated dynamically by app.js from Django data -->
+  </div>
+</div>
+
+<!-- Floating copy status indicator -->
+<div class="toast" id="toast">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" style="display:inline-block; vertical-align:middle; margin-right:4px;">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+  <span>Text copied to clipboard</span>
+</div>
+
+<!-- Pass data from Django backend to JavaScript state -->
+<script id="django-rules-data" type="application/json">
+  {
+    "windows": [
+      {% for rule in windows_rules %}
+        {
+          "id": "{{ rule.id }}",
+          "title": "{{ rule.title|escapejs }}",
+          "category": "{{ rule.category|escapejs }}",
+          "severity": "{{ rule.severity }}",
+          "description": "{{ rule.description|escapejs }}",
+          "rationale": "{{ rule.rationale|escapejs }}",
+          "verification": "{{ rule.verification|escapejs }}",
+          "remediation": "{{ rule.remediation|escapejs }}",
+          "scriptCode": "{{ rule.script_code|escapejs }}",
+          "isCompleted": {% if rule.progress.is_completed %}true{% else %}false{% endif %},
+          "isIncluded": {% if rule.progress.is_included_in_script %}true{% else %}false{% endif %}
+        }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "linux": [
+      {% for rule in linux_rules %}
+        {
+          "id": "{{ rule.id }}",
+          "title": "{{ rule.title|escapejs }}",
+          "category": "{{ rule.category|escapejs }}",
+          "severity": "{{ rule.severity }}",
+          "description": "{{ rule.description|escapejs }}",
+          "rationale": "{{ rule.rationale|escapejs }}",
+          "verification": "{{ rule.verification|escapejs }}",
+          "remediation": "{{ rule.remediation|escapejs }}",
+          "scriptCode": "{{ rule.script_code|escapejs }}",
+          "isCompleted": {% if rule.progress.is_completed %}true{% else %}false{% endif %},
+          "isIncluded": {% if rule.progress.is_included_in_script %}true{% else %}false{% endif %}
+        }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Add empty dummy functions/elements for script page options to prevent JS error crashes -->
+<div style="display:none;">
+  <span id="file-name"></span>
+  <textarea id="code-viewer"></textarea>
+  <button id="copy-btn"></button>
+  <button id="download-btn"></button>
+</div>
+{% endblock %}

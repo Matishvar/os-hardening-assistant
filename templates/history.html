@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<header class="glass-panel" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; flex-wrap: wrap; gap: 1.5rem;">
+  <div class="logo-section">
+    <h2 style="font-size: 1.75rem; font-weight: 700; background: linear-gradient(90deg, #818cf8 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.5rem;">
+      📜 Diagnostic Scan Logs
+    </h2>
+    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">Historical timeline of system compliance diagnostics and downloadable PDF reports</p>
+  </div>
+</header>
+
+<div class="glass-panel" style="padding: 2rem; overflow-x: auto;">
+  <table class="history-table" style="width: 100%; border-collapse: collapse; min-width: 600px;">
+    <thead>
+      <tr style="border-bottom: 2px solid var(--panel-border); text-align: left;">
+        <th style="padding: 1rem 1.5rem; color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Date & Time</th>
+        <th style="padding: 1rem 1.5rem; color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Target Operating System</th>
+        <th style="padding: 1rem 1.5rem; color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Compliance Score</th>
+        <th style="padding: 1rem 1.5rem; color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; text-align: right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for report in reports %}
+      <tr style="border-bottom: 1px solid var(--panel-border); transition: background var(--transition-fast);">
+        <td style="padding: 1.2rem 1.5rem; font-family: var(--font-mono); font-size: 0.88rem; color: var(--text-primary);">
+          {{ report.timestamp|date:"Y-m-d H:i:s" }}
+        </td>
+        <td style="padding: 1.2rem 1.5rem;">
+          <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--panel-border); font-size: 0.72rem; padding: 0.25rem 0.75rem; border-radius: 30px;">
+            {% if report.platform == 'windows' %}
+              💻 WINDOWS OS
+            {% elif report.platform == 'linux' %}
+              🐧 LINUX OS
+            {% else %}
+              🛡️ COMBINED OS
+            {% endif %}
+          </span>
+        </td>
+        <td style="padding: 1.2rem 1.5rem; font-weight: 700; font-size: 1.1rem; color: {% if report.score >= 80 %}var(--success){% elif report.score >= 50 %}var(--warning){% else %}var(--danger){% endif %};">
+          {{ report.score }}%
+        </td>
+        <td style="padding: 1.2rem 1.5rem; text-align: right;">
+          <a href="{% url 'download_pdf' platform=report.platform %}" class="primary-btn" style="display: inline-flex; text-decoration: none; padding: 0.45rem 1.2rem; font-size: 0.8rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-weight: 600; border-radius: var(--radius-sm); align-items: center; gap: 0.25rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);" title="Download compiled PDF certificate for this run">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Download PDF
+          </a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📁</div>
+          <h4 style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">No scans recorded yet</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary);">Audit your configurations on the dashboard to register a security record.</p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Dummy JSON config so app.js does not crash on history view load -->
+<div style="display:none;">
+  <span id="progress-value">0%</span>
+  <span id="completed-value">0</span>
+  <span id="pending-value">0</span>
+  <button id="scan-btn"></button>
+  <div id="loading-overlay"></div>
+  <div id="report-modal">
+    <span id="report-platform-title"></span>
+    <span id="report-timestamp"></span>
+    <span id="report-before-score"></span>
+    <span id="report-after-score"></span>
+    <a href="#" id="download-pdf-btn"></a>
+    <div id="score-shift-bar"></div>
+    <span id="shift-summary"></span>
+    <ul id="report-resolved-list"></ul>
+    <ul id="report-failed-list"></ul>
+    <button id="close-modal-btn"></button>
+  </div>
+  <span id="file-name"></span>
+  <textarea id="code-viewer"></textarea>
+  <button id="copy-btn"></button>
+  <button id="download-btn"></button>
+  <input type="text" id="search-input">
+  <div id="filter-group"></div>
+  <div id="checklist"></div>
+  <button id="toggle-all-checkboxes"></button>
+  <button id="toggle-all-script"></button>
+</div>
+
+<script id="django-rules-data" type="application/json">
+  {
+    "windows": [],
+    "linux": []
+  }
+</script>
+{% endblock %}

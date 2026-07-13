@@ -4,9 +4,11 @@ import json
 import zipfile
 import subprocess
 import sys
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.http import require_POST
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from .models import HardeningRule, UserProgress, ScanReport
 
@@ -16,7 +18,53 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-def index_view(request):
+# --- Database User Seeding helper ---
+def ensure_default_user():
+    """Checks and creates default admin user for initial testing."""
+    try:
+        from django.contrib.auth.models import User
+        if not User.objects.filter(username='admin').exists():
+            User.objects.create_superuser('admin', 'admin@example.com', 'security-admin-2026')
+            print("Successfully pre-seeded default superuser: admin / security-admin-2026")
+    except Exception as e:
+        print("Warning: Failed to seed admin user on load:", e)
+
+
+# --- Authentication Views ---
+
+def login_view(request):
+    """Secure login endpoint authenticating username & password credentials."""
+    ensure_default_user()
+    
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    error = None
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            next_url = request.GET.get('next', 'dashboard')
+            return redirect(next_url)
+        else:
+            error = "Invalid username or password"
+            
+    return render(request, 'login.html', {'error': error})
+
+@login_required
+def logout_view(request):
+    """Terminates session and redirects to the login screen."""
+    logout(request)
+    return redirect('login')
+
+
+# --- Context Helpers ---
+
+def get_base_context():
+    """Helper to return consistent layout variables across all dashboard slides."""
     rules = HardeningRule.objects.select_related('progress').all()
     
     windows_rules = [r for r in rules if r.platform == 'windows']
@@ -35,7 +83,7 @@ def index_view(request):
     win_categories = sorted(list(set(r.category for r in windows_rules)))
     lin_categories = sorted(list(set(r.category for r in linux_rules)))
     
-    context = {
+    return {
         'windows_rules': windows_rules,
         'linux_rules': linux_rules,
         'stats': {
@@ -55,8 +103,46 @@ def index_view(request):
             }
         }
     }
-    return render(request, 'index.html', context)
 
+
+# --- Slide Page Controllers ---
+
+@login_required
+def dashboard_view(request):
+    """Protected view displaying Slide 1: System Overview dashboard."""
+    context = get_base_context()
+    context['active_slide'] = 'dashboard'
+    return render(request, 'dashboard.html', context)
+
+@login_required
+def checklist_view(request):
+    """Protected view displaying Slide 2: Interactive security checklist."""
+    context = get_base_context()
+    context['active_slide'] = 'checklist'
+    return render(request, 'checklist.html', context)
+
+@login_required
+def script_view(request):
+    """Protected view displaying Slide 3: Script generator & compiler."""
+    context = get_base_context()
+    context['active_slide'] = 'script'
+    return render(request, 'script.html', context)
+
+@login_required
+def history_view(request):
+    """Protected view displaying Slide 4: Diagnostic scans history table."""
+    context = get_base_context()
+    context['active_slide'] = 'history'
+    
+    # Query database scan report logs
+    reports = ScanReport.objects.filter(platform__in=['windows', 'linux', 'combined']).order_by('-timestamp')
+    context['reports'] = reports
+    return render(request, 'history.html', context)
+
+
+# --- Protected API Actions ---
+
+@login_required
 @require_POST
 def api_toggle_complete(request):
     try:
@@ -85,6 +171,7 @@ def api_toggle_complete(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
+@login_required
 @require_POST
 def api_toggle_include(request):
     try:
@@ -104,6 +191,7 @@ def api_toggle_include(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
+@login_required
 @require_POST
 def api_bulk_actions(request):
     try:
@@ -142,6 +230,7 @@ def api_bulk_actions(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
+@login_required
 def download_script(request, platform):
     if platform not in ['windows', 'linux']:
         return HttpResponse("Invalid platform", status=400)
@@ -305,6 +394,7 @@ def execute_windows_audits():
         
     return completed
 
+@login_required
 @require_POST
 def api_scan_system(request):
     """Scans Windows or Linux system separately depending on request parameter."""
@@ -391,6 +481,7 @@ def api_scan_system(request):
 
 # --- Code Repository Downloader ---
 
+@login_required
 def download_repository_zip(request):
     """Zips the entire workspace directories and streams as package file, omitting DB/Caches."""
     buffer = io.BytesIO()
@@ -415,6 +506,7 @@ def download_repository_zip(request):
 
 # --- PDF Compliance Report Compiler (ReportLab) ---
 
+@login_required
 def download_pdf_report(request, platform):
     """Compiles rules and progress data separately for the selected platform, generating PDF download."""
     if platform not in ['windows', 'linux']:

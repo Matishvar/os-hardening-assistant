@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<header class="glass-panel" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; flex-wrap: wrap; gap: 1.5rem;">
+  <div class="logo-section">
+    <h2 style="font-size: 1.75rem; font-weight: 700; background: linear-gradient(90deg, #818cf8 0%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.5rem;">
+      📊 System Security Overview
+    </h2>
+    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">Real-time compliance status & automated auditing diagnostics</p>
+  </div>
+
+  <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+    <a href="/api/download-repo/" class="primary-btn download-repo-btn" title="Download clean ZIP of this repository codebase" style="text-decoration: none; padding: 0.6rem 1.2rem;">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3 3m0 0l3-3m-3 3V2.25" />
+      </svg>
+      Download Repo ZIP
+    </a>
+    <div class="platform-tabs" id="platform-tabs">
+      <button class="platform-btn active" data-platform="windows">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+          <path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.1zM10.95 1.95L24 0v11.55H10.95V1.95zM10.95 12.45H24v11.55l-13.05-1.95v-9.6z"/>
+        </svg>
+        Windows
+      </button>
+      <button class="platform-btn" data-platform="linux">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+          <path d="M12 2c-5.52 0-10 4.48-10 10 0 4.75 3.31 8.72 7.75 9.75v-6.88h-2.5v-2.87h2.5v-2.18c0-2.47 1.49-3.83 3.7-3.83 1.06 0 1.97.08 2.24.11v2.59h-1.54c-1.2 0-1.43.57-1.43 1.4v1.83h2.88l-.37 2.87h-2.51v6.9c4.52-.98 7.9-4.97 7.9-9.77 0-5.52-4.48-10-10-10z" style="display:none;"/>
+          <path d="M12 2a10 10 0 0 0-7.8 16.2c.3.4.7.7 1.1 1a10.4 10.4 0 0 0 13.4 0c.4-.3.8-.6 1.1-1A10 10 0 0 0 12 2zm1 3.5c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm-2 0c.3 0 .5.2.5.5s-.2.5-.5.5-.5-.2-.5-.5.2-.5.5-.5zm1 6.5c-1.3 0-2.5-.5-3-1-.2-.2-.2-.5 0-.7a.5.5 0 0 1 .7 0c.4.4 1.3.7 2.3.7s1.9-.3 2.3-.7a.5.5 0 0 1 .7.7c-.5.5-1.7 1-3 1z"/>
+        </svg>
+        Linux
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="dashboard-summary" style="margin-bottom: 2rem;">
+  <div class="summary-card glass-panel progress-widget">
+    <div class="icon-box">🛡️</div>
+    <div class="info">
+      <span class="label">Compliance Score</span>
+      <span class="value" id="progress-value">0%</span>
+    </div>
+  </div>
+  <div class="summary-card glass-panel completed-widget">
+    <div class="icon-box">✅</div>
+    <div class="info">
+      <span class="label">Passed Rules</span>
+      <span class="value" id="completed-value">0</span>
+    </div>
+  </div>
+  <div class="summary-card glass-panel pending-widget">
+    <div class="icon-box">⚠️</div>
+    <div class="info">
+      <span class="label">Vulnerable Rules</span>
+      <span class="value" id="pending-value">0</span>
+    </div>
+  </div>
+</div>
+
+<div class="glass-panel" style="padding: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; min-height: 350px;">
+  <!-- Large Security Gauge -->
+  <div class="gauge-container" style="position: relative; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center;">
+    <svg width="180" height="180" viewBox="0 0 100 100" style="transform: rotate(-90deg);">
+      <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.03)" stroke-width="8" fill="transparent"/>
+      <circle id="gauge-circle" cx="50" cy="50" r="40" stroke="url(#gradient-primary)" stroke-width="8" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" style="transition: stroke-dashoffset 1.2s cubic-bezier(0.19, 1, 0.22, 1);"/>
+      <defs>
+        <linearGradient id="gradient-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#6366f1" />
+          <stop offset="100%" stop-color="#10b981" />
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="gauge-text" style="position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <span id="gauge-pct" style="font-size: 2.25rem; font-weight: 800; color: white;">0%</span>
+      <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;">Secured</span>
+    </div>
+  </div>
+
+  <div style="max-width: 500px;">
+    <h3 style="font-size: 1.35rem; font-weight: 600; margin-bottom: 0.5rem;">Audit local operating system configurations</h3>
+    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem;">
+      Trigger a concurrent security diagnosis scan checking for active firewall profiles, password length policies, Guest account status, Defender configurations, and registry overrides.
+    </p>
+    <button class="primary-btn scan-btn" id="scan-btn" style="padding: 0.8rem 2.5rem; font-size: 1rem; border-radius: 30px; margin: 0 auto; display: flex; align-items: center; gap: 0.5rem; font-weight: 700; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.25);">
+      ⚡ Run Automated Audit Scan
+    </button>
+  </div>
+</div>
+
+<!-- Loading / Scanning Overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loader-content glass-panel" style="padding: 3rem; text-align: center; border-radius: var(--radius-lg);">
+    <div class="spinner"></div>
+    <h3 style="margin-top: 1.5rem; font-size: 1.5rem; font-weight: 600;">Auditing Local OS Configurations...</h3>
+    <p style="color: var(--text-secondary); margin-top: 0.5rem;">Running system diagnostic scripts in background</p>
+  </div>
+</div>
+
+<!-- Before vs After Scan Report Modal -->
+<div class="modal-overlay" id="report-modal">
+  <div class="modal-content glass-panel">
+    <div class="modal-header">
+      <h2>
+        📊 <span id="report-platform-title">Windows</span> Compliance Report
+      </h2>
+      <div class="modal-header-actions" style="display: flex; gap: 1rem; align-items: center;">
+        <a href="#" id="download-pdf-btn" class="primary-btn download-pdf-btn" style="text-decoration: none; padding: 0.45rem 1rem; font-size: 0.82rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);" title="Download full printable PDF audit report for this platform">
+          📥 Download PDF Report
+        </a>
+        <button class="close-modal-btn" id="close-modal-btn" title="Close report modal">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p class="scan-time">Scan completed on: <span id="report-timestamp">-</span></p>
+      
+      <!-- Score Comparison Gauge -->
+      <div class="comparison-scores" style="display: flex; align-items: center; justify-content: space-between; margin: 1.5rem 0; gap: 1.5rem;">
+        <div class="score-card before" style="flex: 1; padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid rgba(239, 68, 68, 0.2); text-align: center; background: rgba(255, 255, 255, 0.01); display: flex; flex-direction: column; gap: 0.5rem;">
+          <span class="score-label" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 1px;">BEFORE SCAN</span>
+          <span class="score-percent" id="report-before-score" style="font-size: 2.5rem; font-weight: 800; color: var(--text-secondary);">0%</span>
+        </div>
+        <div class="score-arrow" style="color: var(--text-muted); display: flex; align-items: center; justify-content: center;">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path>
+          </svg>
+        </div>
+        <div class="score-card after" style="flex: 1; padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid rgba(16, 185, 129, 0.35); text-align: center; background: rgba(16, 185, 129, 0.02); display: flex; flex-direction: column; gap: 0.5rem;">
+          <span class="score-label" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 1px;">AFTER SCAN</span>
+          <span class="score-percent" id="report-after-score" style="font-size: 2.5rem; font-weight: 800; color: var(--success); text-shadow: 0 0 20px var(--success-glow);">0%</span>
+        </div>
+      </div>
+
+      <div class="score-shift-bar-container">
+        <div class="score-shift-bar" id="score-shift-bar"></div>
+      </div>
+      <p class="shift-summary" id="shift-summary">Compliance rating increased by 0%</p>
+
+      <!-- Detailed Lists of resolved vs failed items -->
+      <div class="report-details-lists">
+        <div class="details-list-box success-list">
+          <h3>✅ Active / Compliant Controls</h3>
+          <ul id="report-resolved-list">
+            <li>No resolved items.</li>
+          </ul>
+        </div>
+        <div class="details-list-box danger-list">
+          <h3>⚠️ Vulnerable / Pending Controls</h3>
+          <ul id="report-failed-list">
+            <li>No remaining issues!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating copy status indicator -->
+<div class="toast" id="toast">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" style="display:inline-block; vertical-align:middle; margin-right:4px;">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+  <span>Text copied to clipboard</span>
+</div>
+
+<!-- Pass data from Django backend to JavaScript state -->
+<script id="django-rules-data" type="application/json">
+  {
+    "windows": [
+      {% for rule in windows_rules %}
+        {
+          "id": "{{ rule.id }}",
+          "title": "{{ rule.title|escapejs }}",
+          "category": "{{ rule.category|escapejs }}",
+          "severity": "{{ rule.severity }}",
+          "description": "{{ rule.description|escapejs }}",
+          "rationale": "{{ rule.rationale|escapejs }}",
+          "verification": "{{ rule.verification|escapejs }}",
+          "remediation": "{{ rule.remediation|escapejs }}",
+          "scriptCode": "{{ rule.script_code|escapejs }}",
+          "isCompleted": {% if rule.progress.is_completed %}true{% else %}false{% endif %},
+          "isIncluded": {% if rule.progress.is_included_in_script %}true{% else %}false{% endif %}
+        }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "linux": [
+      {% for rule in linux_rules %}
+        {
+          "id": "{{ rule.id }}",
+          "title": "{{ rule.title|escapejs }}",
+          "category": "{{ rule.category|escapejs }}",
+          "severity": "{{ rule.severity }}",
+          "description": "{{ rule.description|escapejs }}",
+          "rationale": "{{ rule.rationale|escapejs }}",
+          "verification": "{{ rule.verification|escapejs }}",
+          "remediation": "{{ rule.remediation|escapejs }}",
+          "scriptCode": "{{ rule.script_code|escapejs }}",
+          "isCompleted": {% if rule.progress.is_completed %}true{% else %}false{% endif %},
+          "isIncluded": {% if rule.progress.is_included_in_script %}true{% else %}false{% endif %}
+        }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Add circular gauge updating to the dashboard init
+  const originalUpdateDashboard = updateDashboard;
+  updateDashboard = function() {
+    originalUpdateDashboard();
+    
+    // Calculate circular gauge metrics
+    const rules = rulesData[state.selectedPlatform] || [];
+    const total = rules.length;
+    const completed = rules.filter(r => r.isCompleted).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    // Update gauge DOM
+    const circle = document.getElementById("gauge-circle");
+    const pctLabel = document.getElementById("gauge-pct");
+    if (circle && pctLabel) {
+      pctLabel.textContent = `${percentage}%`;
+      // SVG Circle circumference is 2 * PI * r = 2 * 3.14159 * 40 = 251.2
+      const offset = 251.2 - (percentage / 100) * 251.2;
+      circle.style.strokeDashoffset = offset;
+    }
+  };
+</script>
+{% endblock %}

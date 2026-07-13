@@ -2,7 +2,17 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.index_view, name='index'),
+    # Authentication endpoints
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    
+    # Slide panel views
+    path('', views.dashboard_view, name='dashboard'),
+    path('checklist/', views.checklist_view, name='checklist'),
+    path('script/', views.script_view, name='script'),
+    path('history/', views.history_view, name='history'),
+    
+    # REST API endpoints
     path('api/toggle-complete/', views.api_toggle_complete, name='api_toggle_complete'),
     path('api/toggle-include/', views.api_toggle_include, name='api_toggle_include'),
     path('api/bulk-actions/', views.api_bulk_actions, name='api_bulk_actions'),
