@@ -1,0 +1,264 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS Hardening Assistant - Forgot Username</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <style>
+    .login-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100vw;
+      padding: 1.5rem;
+      position: relative;
+    }
+    
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      padding: 3rem;
+      border-radius: var(--radius-lg);
+      text-align: center;
+      animation: cardSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    @keyframes cardSlideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .login-header {
+      margin-bottom: 2rem;
+    }
+    
+    .login-badge {
+      width: 56px;
+      height: 56px;
+      background: var(--primary-glow);
+      color: var(--primary);
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.75rem;
+      border: 1px solid var(--panel-border);
+      margin-bottom: 1rem;
+      box-shadow: 0 10px 25px rgba(99, 102, 241, 0.15);
+    }
+    
+    .login-header h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #6366f1 0%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .login-header p {
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      margin-top: 0.25rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1.25rem;
+      text-align: left;
+    }
+    
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+    
+    .input-wrapper {
+      position: relative;
+    }
+    
+    .input-wrapper input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--panel-border);
+      padding: 0.85rem 1rem 0.85rem 2.5rem;
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      transition: all var(--transition-fast);
+    }
+    
+    .input-wrapper input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    
+    .input-wrapper svg {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      width: 16px;
+      height: 16px;
+      pointer-events: none;
+    }
+    
+    .error-alert {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-align: left;
+      animation: shake 0.4s ease;
+    }
+    
+    .username-reveal {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      animation: revealZoom 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    @keyframes revealZoom {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
+    .username-reveal h4 {
+      font-weight: 600;
+      color: #34d399;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .username-reveal p {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    
+    .username-reveal code {
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: block;
+      margin-top: 0.75rem;
+      background: rgba(0,0,0,0.3);
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.05);
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+    
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
+      color: white;
+      border: none;
+      padding: 0.9rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.25);
+      transition: all var(--transition-fast);
+      margin-top: 0.5rem;
+    }
+    
+    .submit-btn:hover {
+      background: linear-gradient(90deg, #4f46e5 0%, #9333ea 100%);
+      box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <div class="login-container">
+    <div class="login-card glass-panel">
+      <div class="login-header">
+        <div class="login-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <h2>Find Username</h2>
+        <p>Retrieve username using registered email</p>
+      </div>
+
+      {% if error %}
+      <div class="error-alert">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      {% if found_username %}
+      <div class="username-reveal">
+        <h4>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0110 21a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0114 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+          </svg>
+          Account Identified!
+        </h4>
+        <p>Use the following username credentials to log back into the system dashboard:</p>
+        <code>{{ found_username }}</code>
+      </div>
+      {% endif %}
+
+      <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <div class="input-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <input type="email" id="email" name="email" placeholder="Enter registered email..." required autocomplete="email" value="{{ saved_email|default:'' }}">
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn">Search Username</button>
+      </form>
+
+      <div style="margin-top: 1.5rem; font-size: 0.88rem; color: var(--text-secondary);">
+        Back to <a href="{% url 'login' %}" style="color: #818cf8; text-decoration: none; font-weight: 600;">Sign In</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

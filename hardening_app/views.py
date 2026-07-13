@@ -186,7 +186,7 @@ def ensure_default_user_and_rules():
 # --- Authentication Views ---
 
 def login_view(request):
-    """Secure login endpoint authenticating username, email, & password credentials."""
+    """Secure login endpoint authenticating username & password credentials."""
     ensure_default_user_and_rules()
     
     if request.user.is_authenticated:
@@ -194,37 +194,29 @@ def login_view(request):
         
     error = None
     success = None
-    show_forgot_password = False
+    show_forgot_links = False
     saved_username = ""
-    saved_email = ""
     
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
-        email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
         
         saved_username = username
-        saved_email = email
         
         user = authenticate(request, username=username, password=password)
         if user is not None:
-            if user.email.strip().lower() == email.strip().lower():
-                login(request, user)
-                next_url = request.GET.get('next', 'dashboard')
-                return redirect(next_url)
-            else:
-                error = "Invalid credentials. If you forgot your password, reset it."
-                show_forgot_password = True
+            login(request, user)
+            next_url = request.GET.get('next', 'dashboard')
+            return redirect(next_url)
         else:
-            error = "Invalid credentials. If you forgot your password, reset it."
-            show_forgot_password = True
+            error = "Invalid credentials. Double check your password or recover your username."
+            show_forgot_links = True
             
     return render(request, 'login.html', {
         'error': error,
         'success': success,
-        'show_forgot_password': show_forgot_password,
-        'saved_username': saved_username,
-        'saved_email': saved_email
+        'show_forgot_links': show_forgot_links,
+        'saved_username': saved_username
     })
 
 def register_view(request):
@@ -320,6 +312,32 @@ def forgot_password_view(request):
     return render(request, 'forgot_password.html', {
         'error': error,
         'saved_username': saved_username,
+        'saved_email': saved_email
+    })
+
+def forgot_username_view(request):
+    """Retrieves username by checking registered email address."""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    error = None
+    found_username = None
+    saved_email = ""
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        saved_email = email
+        from django.contrib.auth.models import User
+        
+        user = User.objects.filter(email__iexact=email).first()
+        if user:
+            found_username = user.username
+        else:
+            error = "No user registered with this email address."
+            
+    return render(request, 'forgot_username.html', {
+        'error': error,
+        'found_username': found_username,
         'saved_email': saved_email
     })
 
