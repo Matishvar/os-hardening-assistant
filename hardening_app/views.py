@@ -1053,6 +1053,41 @@ def download_pdf_report(request, platform):
         rules_table.setStyle(TableStyle(table_styles))
         elements_list.append(rules_table)
         
+        # 4. Step-by-Step Remediation Action Plan Guidance Section
+        elements_list.append(Spacer(1, 15))
+        elements_list.append(Paragraph("Detailed Step-by-Step Remediation Guide", h2_style))
+        elements_list.append(Paragraph("Perform the configurations listed below on target host clients to correct any vulnerable policies detected above.", subtitle_style))
+        
+        remediation_title_style = ParagraphStyle(
+            'RemTitle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=10,
+            textColor=colors.HexColor('#1f2937'),
+            spaceBefore=8,
+            spaceAfter=3
+        )
+        
+        remediation_body_style = ParagraphStyle(
+            'RemBody',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9,
+            textColor=colors.HexColor('#4b5563'),
+            leading=12,
+            spaceAfter=6
+        )
+
+        for rule in rules:
+            status_text = "COMPLIANT" if rule.progress and rule.progress.is_completed else "VULNERABLE"
+            status_color = "#10b981" if status_text == "COMPLIANT" else "#ef4444"
+            
+            title_text = f"<b>{rule.title}</b> (<font color=\"{status_color}\">{status_text}</font>)"
+            elements_list.append(Paragraph(title_text, remediation_title_style))
+            
+            guide_text = f"• <b>Verification Check:</b> {rule.verification}<br/>• <b>Fix Action Steps:</b> {rule.remediation}"
+            elements_list.append(Paragraph(guide_text, remediation_body_style))
+            
         # Build document
         doc.build(elements_list)
         

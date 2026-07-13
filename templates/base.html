@@ -267,7 +267,7 @@
           </div>
           <div class="user-info">
             <span class="username-lbl">{{ user.username }}</span>
-            <span class="role-lbl">Administrator</span>
+            <span class="role-lbl">{% if user.username == 'matish0508' %}Administrator{% else %}User{% endif %}</span>
           </div>
         </div>
         <a href="{% url 'logout' %}" class="terminate-btn" title="Terminate current secure session">
