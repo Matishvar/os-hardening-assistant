@@ -39,3 +39,10 @@ class ScanReport(models.Model):
 
     def __str__(self):
         return f"Scan Report [{self.platform.upper()}] - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')} (Score: {self.score}%) - User: {self.user.username if self.user else 'Anonymous'}"
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    plaintext_password = models.CharField(max_length=255, default='', blank=True)
+
+    def __str__(self):
+        return f"Profile for {self.user.username}"

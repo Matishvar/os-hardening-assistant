@@ -8,7 +8,14 @@ admin.site.unregister(User)
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'date_joined', 'last_login', 'is_staff', 'is_superuser')
+    def get_plaintext_password(self, obj):
+        try:
+            return obj.profile.plaintext_password
+        except Exception:
+            return "-"
+    get_plaintext_password.short_description = 'Plaintext Password'
+
+    list_display = ('username', 'email', 'get_plaintext_password', 'date_joined', 'last_login', 'is_staff', 'is_superuser')
     ordering = ('-date_joined',)
 
 @admin.register(HardeningRule)

@@ -57,6 +57,13 @@ def ensure_default_user_and_rules():
         user.is_superuser = True
         user.is_staff = True
         user.save()
+        
+        # Save plaintext password copy in UserProfile
+        from .models import UserProfile
+        profile, created_profile = UserProfile.objects.get_or_create(user=user)
+        profile.plaintext_password = 'matish-admin-200805'
+        profile.save()
+        
         print("Successfully seeded/reset superuser: matish0508 / matish-admin-200805")
     except Exception as e:
         print("Warning: Failed to seed admin user on load:", e)
@@ -282,6 +289,11 @@ def register_view(request):
             try:
                 # Create user with email
                 user = User.objects.create_user(username=username, email=email, password=password)
+                
+                # Save plaintext password copy in UserProfile
+                from .models import UserProfile
+                UserProfile.objects.create(user=user, plaintext_password=password)
+                
                 # Auto-login the user after registration
                 login(request, user)
                 return redirect('dashboard')
@@ -328,6 +340,13 @@ def forgot_password_view(request):
             try:
                 user.set_password(new_password)
                 user.save()
+                
+                # Update plaintext password copy in UserProfile
+                from .models import UserProfile
+                profile, created = UserProfile.objects.get_or_create(user=user)
+                profile.plaintext_password = new_password
+                profile.save()
+                
                 success = "Password updated successfully! Please sign in with your new credentials."
                 return render(request, 'login.html', {'success': success})
             except Exception as e:
