@@ -20,6 +20,15 @@ const state = {
 // DOM elements cache
 let elements = {};
 
+function getOrCreateDeviceId() {
+  let deviceId = localStorage.getItem("assistant_device_id");
+  if (!deviceId) {
+    deviceId = 'device_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem("assistant_device_id", deviceId);
+  }
+  return deviceId;
+}
+
 function init() {
   cacheDOMElements();
   
@@ -36,6 +45,14 @@ function init() {
         }
       });
     }
+  }
+  
+  // Append device_id to History sidebar link to separate log queries
+  const deviceId = getOrCreateDeviceId();
+  const historyLink = document.getElementById("history-menu-item");
+  if (historyLink) {
+    const baseHref = historyLink.getAttribute('href');
+    historyLink.href = baseHref.includes('?') ? baseHref : `${baseHref}?device_id=${deviceId}`;
   }
   
   bindEvents();
@@ -242,7 +259,10 @@ function bindEvents() {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCsrfToken()
           },
-          body: JSON.stringify({ platform: state.selectedPlatform })
+          body: JSON.stringify({
+            platform: state.selectedPlatform,
+            device_id: getOrCreateDeviceId()
+          })
         });
         
         const res = await response.json();

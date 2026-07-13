@@ -29,6 +29,7 @@ class ScanReport(models.Model):
     score = models.FloatField()  # compliance percentage (0 to 100)
     passed_checks = models.TextField()  # JSON-encoded array or comma-separated rule IDs
     failed_checks = models.TextField()  # JSON-encoded array or comma-separated rule IDs
+    device_id = models.CharField(max_length=255, default='', blank=True)
 
     def __str__(self):
-        return f"Scan Report [{self.platform.upper()}] - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')} (Score: {self.score}%)"
+        return f"Scan Report [{self.platform.upper()}] - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')} (Score: {self.score}%) - Device: {self.device_id}"

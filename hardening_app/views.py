@@ -283,7 +283,11 @@ def history_view(request):
     context = get_base_context()
     context['active_slide'] = 'history'
     
-    reports = ScanReport.objects.filter(platform__in=['windows', 'linux', 'android', 'combined']).order_by('-timestamp')
+    device_id = request.GET.get('device_id', '')
+    reports = ScanReport.objects.filter(
+        platform__in=['windows', 'linux', 'android', 'combined'],
+        device_id=device_id
+    ).order_by('-timestamp')
     context['reports'] = reports
     return render(request, 'history.html', context)
 
@@ -591,6 +595,7 @@ def api_scan_system(request):
     try:
         data = json.loads(request.body)
         platform_name = data.get('platform', 'windows')
+        device_id = data.get('device_id', '')
         if platform_name not in ['windows', 'linux', 'android']:
             return JsonResponse({'success': False, 'error': 'Invalid platform'}, status=400)
             
@@ -638,13 +643,17 @@ def api_scan_system(request):
             platform=platform_name,
             score=after_score,
             passed_checks=json.dumps(after_completed),
-            failed_checks=json.dumps(still_failed)
+            failed_checks=json.dumps(still_failed),
+            device_id=device_id
         )
         
-        # Get the previous scan report for the same platform to show baseline comparison
+        # Get the previous scan report for the same platform and device to show baseline comparison
         previous_report = None
         try:
-            previous_report = ScanReport.objects.filter(platform=platform_name).exclude(id=new_report.id).latest('timestamp')
+            previous_report = ScanReport.objects.filter(
+                platform=platform_name,
+                device_id=device_id
+            ).exclude(id=new_report.id).latest('timestamp')
         except ScanReport.DoesNotExist:
             pass
             
