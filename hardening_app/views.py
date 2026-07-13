@@ -186,26 +186,46 @@ def ensure_default_user_and_rules():
 # --- Authentication Views ---
 
 def login_view(request):
-    """Secure login endpoint authenticating username & password credentials."""
+    """Secure login endpoint authenticating username, email, & password credentials."""
     ensure_default_user_and_rules()
     
     if request.user.is_authenticated:
         return redirect('dashboard')
         
     error = None
+    success = None
+    show_forgot_password = False
+    saved_username = ""
+    saved_email = ""
+    
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+        
+        saved_username = username
+        saved_email = email
         
         user = authenticate(request, username=username, password=password)
         if user is not None:
-            login(request, user)
-            next_url = request.GET.get('next', 'dashboard')
-            return redirect(next_url)
+            if user.email.strip().lower() == email.strip().lower():
+                login(request, user)
+                next_url = request.GET.get('next', 'dashboard')
+                return redirect(next_url)
+            else:
+                error = "Invalid credentials. If you forgot your password, reset it."
+                show_forgot_password = True
         else:
-            error = "Invalid username or password"
+            error = "Invalid credentials. If you forgot your password, reset it."
+            show_forgot_password = True
             
-    return render(request, 'login.html', {'error': error})
+    return render(request, 'login.html', {
+        'error': error,
+        'success': success,
+        'show_forgot_password': show_forgot_password,
+        'saved_username': saved_username,
+        'saved_email': saved_email
+    })
 
 def register_view(request):
     """Handles new user registration with strict security password complexity policies."""
@@ -214,18 +234,26 @@ def register_view(request):
         
     error = None
     saved_username = ""
+    saved_email = ""
+    
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
         confirm_password = request.POST.get('confirm_password', '')
         
         saved_username = username
+        saved_email = email
         from django.contrib.auth.models import User
         
         if not username:
             error = "Username is required."
+        elif not email:
+            error = "Email address is required."
         elif User.objects.filter(username=username).exists():
             error = "Username is already taken."
+        elif User.objects.filter(email=email).exists():
+            error = "An account with this email is already registered."
         elif password != confirm_password:
             error = "Passwords do not match."
         elif len(password) < 14:
@@ -236,15 +264,64 @@ def register_view(request):
             error = "Password must contain at least one special symbol (e.g. !, @, #, $, %, etc.)."
         else:
             try:
-                # Create user
-                user = User.objects.create_user(username=username, password=password)
+                # Create user with email
+                user = User.objects.create_user(username=username, email=email, password=password)
                 # Auto-login the user after registration
                 login(request, user)
                 return redirect('dashboard')
             except Exception as e:
                 error = f"Registration failed: {str(e)}"
                 
-    return render(request, 'register.html', {'error': error, 'saved_username': saved_username})
+    return render(request, 'register.html', {
+        'error': error,
+        'saved_username': saved_username,
+        'saved_email': saved_email
+    })
+
+def forgot_password_view(request):
+    """Self-service secure password recovery enforcing complexity validations."""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+        
+    error = None
+    saved_username = ""
+    saved_email = ""
+    
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        new_password = request.POST.get('new_password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+        
+        saved_username = username
+        saved_email = email
+        from django.contrib.auth.models import User
+        
+        user = User.objects.filter(username=username, email=email).first()
+        if not user:
+            error = "No user found with the specified Username and Email."
+        elif new_password != confirm_password:
+            error = "Passwords do not match."
+        elif len(new_password) < 14:
+            error = "Password must contain a minimum of 14 characters."
+        elif not any(c.isupper() for c in new_password):
+            error = "Password must contain at least one uppercase letter (A-Z)."
+        elif not any(not c.isalnum() for c in new_password):
+            error = "Password must contain at least one special symbol (e.g. !, @, #, $, %, etc.)."
+        else:
+            try:
+                user.set_password(new_password)
+                user.save()
+                success = "Password updated successfully! Please sign in with your new credentials."
+                return render(request, 'login.html', {'success': success})
+            except Exception as e:
+                error = f"Password reset failed: {str(e)}"
+                
+    return render(request, 'forgot_password.html', {
+        'error': error,
+        'saved_username': saved_username,
+        'saved_email': saved_email
+    })
 
 @login_required
 def logout_view(request):

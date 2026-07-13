@@ -88,7 +88,7 @@
       width: 100%;
       background: rgba(0, 0, 0, 0.3);
       border: 1px solid var(--panel-border);
-      padding: 0.85rem 1rem 0.85rem 2.5rem;
+      padding: 0.85rem 2.8rem 0.85rem 2.5rem;
       border-radius: var(--radius-sm);
       color: var(--text-primary);
       font-family: var(--font-sans);
@@ -129,6 +129,21 @@
       animation: shake 0.4s ease;
     }
     
+    .success-alert {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #a7f3d0;
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-align: left;
+    }
+    
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
       25% { transform: translateX(-5px); }
@@ -156,33 +171,31 @@
       transform: translateY(-1px);
     }
     
-    .default-creds {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--panel-border);
-      border-radius: var(--radius-sm);
-      padding: 1rem;
-      margin-top: 2rem;
-      font-size: 0.8rem;
+    .password-toggle {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
       color: var(--text-secondary);
-      text-align: left;
+      display: flex;
+      align-items: center;
+      padding: 0;
+      z-index: 5;
     }
     
-    .default-creds h4 {
-      font-weight: 600;
+    .password-toggle:hover {
       color: var(--text-primary);
-      margin-bottom: 0.35rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-size: 0.75rem;
     }
     
-    .default-creds code {
-      font-family: var(--font-mono);
-      background: rgba(0,0,0,0.3);
-      padding: 0.15rem 0.35rem;
-      border-radius: 4px;
-      color: #818cf8;
-      border: 1px solid rgba(255,255,255,0.05);
+    .password-toggle svg {
+      position: static;
+      transform: none;
+      pointer-events: auto;
+      width: 18px;
+      height: 18px;
     }
   </style>
 </head>
@@ -204,6 +217,15 @@
         <p>Access OS Hardening Dashboard</p>
       </div>
 
+      {% if success %}
+      <div class="success-alert">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0110 21a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0114 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+        </svg>
+        <span>{{ success }}</span>
+      </div>
+      {% endif %}
+
       {% if error %}
       <div class="error-alert">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -222,7 +244,18 @@
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <input type="text" id="username" name="username" placeholder="Enter username..." required autofocus autocomplete="username">
+            <input type="text" id="username" name="username" placeholder="Enter username..." required autofocus autocomplete="username" value="{{ saved_username|default:'' }}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email ID</label>
+          <div class="input-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            <input type="email" id="email" name="email" placeholder="Enter email address..." required autocomplete="email" value="{{ saved_email|default:'' }}">
           </div>
         </div>
 
@@ -234,8 +267,25 @@
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
             <input type="password" id="password" name="password" placeholder="Enter password..." required autocomplete="current-password">
+            <button type="button" class="password-toggle" onclick="togglePasswordVisibility('password', this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
           </div>
         </div>
+
+        {% if show_forgot_password %}
+        <div style="margin-top: 1rem; margin-bottom: 1.5rem; text-align: right;">
+          <a href="{% url 'forgot_password' %}" style="color: #fca5a5; font-size: 0.85rem; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+            </svg>
+            Forgot Password?
+          </a>
+        </div>
+        {% endif %}
 
         <button type="submit" class="submit-btn">Authorize Session</button>
       </form>
@@ -245,5 +295,25 @@
       </div>
     </div>
   </div>
+
+  <script>
+    function togglePasswordVisibility(fieldId, button) {
+      const input = document.getElementById(fieldId);
+      const svg = button.querySelector('svg');
+      if (input.type === 'password') {
+        input.type = 'text';
+        svg.innerHTML = `
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        `;
+      } else {
+        input.type = 'password';
+        svg.innerHTML = `
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        `;
+      }
+    }
+  </script>
 </body>
 </html>
