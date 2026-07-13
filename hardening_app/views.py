@@ -178,7 +178,6 @@ def ensure_default_user_and_rules():
                     "script_code": rule["script_code"]
                 }
             )
-            UserProgress.objects.get_or_create(rule=rule_obj)
             
     except Exception as e:
         print("Warning: Failed to seed Android rules on load:", e)

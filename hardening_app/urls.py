@@ -24,3 +24,9 @@ urlpatterns = [
     path('api/download-pdf/<str:platform>/', views.download_pdf_report, name='download_pdf'),
     path('download-script/<str:platform>/', views.download_script, name='download_script'),
 ]
+
+# Force-seed credentials on startup when urls are loaded
+try:
+    views.ensure_default_user_and_rules()
+except Exception as e:
+    print("Warning: Failed to seed admin user on startup load:", e)
